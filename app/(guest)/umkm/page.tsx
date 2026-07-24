@@ -6,6 +6,7 @@ import UmkmCard from "@/components/UmkmCard";
 
 interface Umkm {
   id: number;
+  slug: string;
   nama: string;
   pemilik: string;
   kategori: string;
@@ -16,6 +17,7 @@ interface Umkm {
 
 const umkmData: Umkm[] = Array.from({ length: 36 }, (_, i) => ({
   id: i + 1,
+  slug: i % 4 === 0 ? "keripik-bu-sri" : i % 4 === 1 ? "dapoer-mak-tun" : i % 4 === 2 ? "batik-masaran" : "madu-masaran",
   nama:
     i % 4 === 0
       ? "Keripik Bu Sri"
@@ -140,6 +142,7 @@ export default function Page() {
               category={item.kategori}
               location={`Dusun ${item.dusun}`}
               image={item.image}
+              href={`/umkm/${item.slug}`}
             />
           ))}
         </div>

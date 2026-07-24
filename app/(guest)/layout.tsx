@@ -1,15 +1,20 @@
-import { TreePine, MapPin, Phone, Mail, MessageCircle } from "lucide-react";
+import { TreePine, MapPin, Phone, Mail } from "lucide-react";
 import Link from "next/link";
-import { FaFacebook as Facebook, FaInstagram as Instagram } from "react-icons/fa6";
+import { FaYoutube as Youtube, FaFacebook as Facebook, FaInstagram as Instagram } from "react-icons/fa6";
 
 const navLinks = [
-  { label: "BERANDA", href: "/", active: true },
+  { label: "BERANDA", href: "/" },
   { label: "DAFTAR UMKM", href: "/umkm" },
-  { label: "PRODUK", href: "#" },
-  { label: "TENTANG DESA", href: "#" },
+  { label: "PRODUK", href: "/produk" },
+  { label: "TENTANG DESA", href: "/tentang-desa" },
 ];
 
-const footerMenu = ["Beranda", "Daftar UMKM", "Produk", "Tentang Desa"];
+const footerMenu = [
+  { label: "Beranda", href: "/" },
+  { label: "Daftar UMKM", href: "/umkm" },
+  { label: "Produk", href: "/produk" },
+  { label: "Tentang Desa", href: "/tentang-desa" },
+];
 
 export default function GuestLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -31,7 +36,7 @@ export default function GuestLayout({ children }: { children: React.ReactNode })
               <Link
                 key={link.label}
                 href={link.href}
-                className={`text-sm font-medium transition-colors hover:text-color1 ${link.active ? "text-color1" : "text-color5/75"}`}
+                className="text-sm font-medium text-color5/75 transition-colors hover:text-color1"
               >
                 {link.label}
               </Link>
@@ -57,12 +62,18 @@ export default function GuestLayout({ children }: { children: React.ReactNode })
             </p>
 
             <div className="mt-5 flex items-center gap-3">
-              {[Facebook, Instagram, MessageCircle].map((Icon, i) => (
+              {[
+                { Icon: Facebook, href: "https://facebook.com", label: "Facebook" },
+                { Icon: Instagram, href: "https://www.instagram.com/desamasaran/", label: "Instagram" },
+                { Icon: Youtube, href: "https://youtube.com", label: "YouTube" },
+              ].map(({ Icon, href, label }) => (
                 <a
-                  key={i}
-                  href="#"
-                  aria-label="Sosial media"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-color3/10 hover:bg-color3/20 transition-colors"
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-color3/10 hover:bg-color3/20 transition-colors text-color3"
                 >
                   <Icon size={16} />
                 </a>
@@ -74,10 +85,10 @@ export default function GuestLayout({ children }: { children: React.ReactNode })
             <p className="text-xs font-semibold tracking-wide text-color4 uppercase mb-4">Menu</p>
             <ul className="space-y-2.5">
               {footerMenu.map((item) => (
-                <li key={item}>
-                  <a href="#" className="text-sm text-color3/70 hover:text-color3">
-                    {item}
-                  </a>
+                <li key={item.label}>
+                  <Link href={item.href} className="text-sm text-color3/70 hover:text-color3">
+                    {item.label}
+                  </Link>
                 </li>
               ))}
             </ul>

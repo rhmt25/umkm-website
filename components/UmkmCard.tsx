@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { MapPin } from "lucide-react";
 
 export interface UmkmCardProps {
@@ -7,6 +8,7 @@ export interface UmkmCardProps {
   category: string;
   location: string;
   image?: string;
+  href?: string;
 }
 
 function ImagePlaceholder({
@@ -31,8 +33,9 @@ export default function UmkmCard({
   category,
   location,
   image,
+  href,
 }: UmkmCardProps) {
-  return (
+  const card = (
     <div className="rounded-2xl border border-color4/70 bg-color3 overflow-hidden hover:shadow-md transition-shadow flex flex-col items-center text-center">
       <div className="relative h-40 w-full overflow-hidden">
         {image ? (
@@ -64,5 +67,13 @@ export default function UmkmCard({
         </div>
       </div>
     </div>
+  );
+
+  return href ? (
+    <Link href={href} className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-color1 focus-visible:ring-offset-2">
+      {card}
+    </Link>
+  ) : (
+    card
   );
 }
