@@ -1,6 +1,6 @@
 "use client";
 
-import { FaFacebook as Facebook, FaInstagram as Instagram, FaTiktok as Tiktok } from "react-icons/fa6";
+import { FaWhatsapp as WhatsApp, FaFacebook as Facebook, FaInstagram as Instagram, FaTiktok as Tiktok } from "react-icons/fa6";
 import { SiGooglemaps as GoogleMaps, SiShopee as Shopee } from "react-icons/si";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -75,10 +75,9 @@ export default function UmkmDetail({ slug }: { slug: string }) {
     const db: Record<string, {
       name: string;
       owner: string;
-      category: string;
+      category: string[];
       address: string;
       phone: string;
-      hours: string;
       whatsapp: string;
       links: {
         google_maps?: string;
@@ -92,10 +91,9 @@ export default function UmkmDetail({ slug }: { slug: string }) {
       "keripik-bu-sri": {
         name: "Keripik Bu Sri",
         owner: "Sri Rahayu",
-        category: "Makanan & Minuman",
+        category: ["Makanan", "Minuman", "Jajanan"],
         address: "Dusun Jetis, Desa Masaran, Kec. Muntilan, Kab. Magelang",
         phone: "0812-3456-7890",
-        hours: "08.00 - 17.00 WIB",
         whatsapp: "https://wa.me/6281234567890",
         links: {
           google_maps: "https://maps.google.com",
@@ -109,10 +107,9 @@ export default function UmkmDetail({ slug }: { slug: string }) {
       "dapoer-mak-tun": {
         name: "Dapoer Mak Tun",
         owner: "Sutini",
-        category: "Makanan & Minuman",
+        category: ["Makanan", "Minuman", "Jajanan", "Jasa"],
         address: "Dusun Ngaran, Desa Masaran, Kec. Muntilan, Kab. Magelang",
         phone: "0812-3456-7891",
-        hours: "08.00 - 17.00 WIB",
         whatsapp: "https://wa.me/6281234567891",
         links: {
           google_maps: "https://maps.google.com",
@@ -126,10 +123,9 @@ export default function UmkmDetail({ slug }: { slug: string }) {
       "batik-masaran": {
         name: "Batik Masaran",
         owner: "Agus Setiawan",
-        category: "Kerajinan",
+        category: ["Kerajinan", "Makanan & Minuman", "Jajanan"],
         address: "Dusun Pucung, Desa Masaran, Kec. Muntilan, Kab. Magelang",
         phone: "0812-3456-7892",
-        hours: "08.00 - 17.00 WIB",
         whatsapp: "https://wa.me/6281234567892",
         links: {
           google_maps: "https://maps.google.com",
@@ -143,10 +139,9 @@ export default function UmkmDetail({ slug }: { slug: string }) {
       "madu-masaran": {
         name: "Madu Masaran",
         owner: "Budi Santoso",
-        category: "Makanan & Minuman",
+        category: ["Makanan & Minuman", "Kerajinan", "Jajanan"],
         address: "Dusun Sumber, Desa Masaran, Kec. Muntilan, Kab. Magelang",
         phone: "0812-3456-7893",
-        hours: "08.00 - 17.00 WIB",
         whatsapp: "https://wa.me/6281234567893",
         links: {
           google_maps: "https://maps.google.com",
@@ -162,7 +157,7 @@ export default function UmkmDetail({ slug }: { slug: string }) {
     return db[slug] || {
       name: slug.split("-").map((word) => word[0].toUpperCase() + word.slice(1)).join(" "),
       owner: "Pemilik UMKM",
-      category: "Makanan & Minuman",
+      category: ["Makanan & Minuman", "Kerajinan", "Jajanan"],
       address: "Desa Masaran, Kec. Muntilan, Kab. Magelang",
       phone: "0812-3456-7890",
       hours: "08.00 - 17.00 WIB",
@@ -189,13 +184,16 @@ export default function UmkmDetail({ slug }: { slug: string }) {
             <div className="mt-6 text-center">
               <h2 className="text-3xl font-bold">{profile.name}</h2>
               <p className="mt-1 text-lg text-color5/70">{profile.owner}</p>
-              <span className="mt-5 inline-flex rounded-md bg-color4 px-3 py-1.5 text-sm font-medium">{profile.category}</span>
+              <div className="mt-5 flex flex-wrap gap-2 items-center justify-center">
+                {profile.category.map((category) => (
+                  <span key={category} className="mt-1 inline-flex rounded-md bg-color4 px-3 py-1.5 text-sm font-medium">{category}</span>
+                ))}
+              </div>
             </div>
 
             <div className="mt-7 space-y-4 text-color5/70">
               <p className="flex items-start gap-3"><MapPin className="mt-0.5 shrink-0 text-color1" size={21} /><span>{profile.address}</span></p>
               <p className="flex items-center gap-3"><Phone className="shrink-0 text-color1" size={20} />{profile.phone}</p>
-              <p className="flex items-center gap-3"><Clock3 className="shrink-0 text-color1" size={20} />{profile.hours}</p>
             </div>
 
             <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -221,7 +219,7 @@ export default function UmkmDetail({ slug }: { slug: string }) {
             </div>
 
             <a href={profile.whatsapp} className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-color1 px-5 py-3.5 font-semibold text-white shadow-sm transition hover:bg-color1/90">
-              <Phone size={19} /> Chat WhatsApp
+              <WhatsApp size={19} /> Chat WhatsApp
             </a>
           </aside>
 

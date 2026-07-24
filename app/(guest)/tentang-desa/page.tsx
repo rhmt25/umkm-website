@@ -1,18 +1,17 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  CheckCircle2,
   Clock3,
   House,
   MapPin,
   Package,
   Phone,
-  Rocket,
   Sprout,
   Store,
-  Target,
   UsersRound,
+  Tag,
 } from "lucide-react";
+import CultureIcon from "@/components/CultureIcon";
 
 function ImagePlaceholder({ label, className = "" }: { label: string; className?: string }) {
   return (
@@ -25,15 +24,15 @@ function ImagePlaceholder({ label, className = "" }: { label: string; className?
 const potentials = [
   { icon: Store, title: "UMKM Berkembang", text: "Beragam pelaku UMKM yang terus tumbuh dan inovatif." },
   { icon: Sprout, title: "Pertanian", text: "Tanah subur dan hasil pertanian berkualitas tinggi." },
-  { icon: Package, title: "Budaya", text: "Beragam budaya dan tradisi lokal yang kaya dan beragam." },
+  { icon: CultureIcon, title: "Budaya", text: "Beragam budaya dan tradisi lokal yang kaya dan beragam." },
   { icon: UsersRound, title: "Gotong Royong", text: "Masyarakat yang guyub, solid, dan saling mendukung." },
 ];
 
 const stats = [
   { icon: UsersRound, value: "120+", label: "UMKM Aktif" },
   { icon: Package, value: "530+", label: "Produk Terdaftar" },
-  { icon: House, value: "8", label: "Kategori" },
-  { icon: UsersRound, value: "4", label: "Dusun" },
+  { icon: Tag, value: "8", label: "Kategori" },
+  { icon: House, value: "4", label: "Dusun" },
 ];
 
 const gallery = ["Kantor Desa", "Gapura Desa", "Balai Desa", "Kegiatan UMKM", "Pemandangan Desa", "Kegiatan Masyarakat"];
@@ -71,19 +70,11 @@ export default function Page() {
           </div>
         </section>
 
-        <section className="mt-5 grid overflow-hidden rounded-2xl bg-color1 text-color3 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map(({ icon: Icon, value, label }, index) => <div key={label} className={`flex items-center justify-center gap-4 px-6 py-6 ${index ? "lg:border-l lg:border-color3/35" : ""}`}><span className="grid h-12 w-12 place-items-center rounded-full border border-color3/70"><Icon size={23} /></span><div><p className="text-2xl font-bold">{value}</p><p className="text-xs text-color3/75">{label}</p></div></div>)}
-        </section>
 
         <section id="lokasi" className="mt-12">
-          <h2 className="text-2xl font-bold text-color1">Lokasi Desa Masaran</h2>
-          <div className="mt-5 grid items-center gap-8 lg:grid-cols-[1.2fr_.8fr]">
+          <h2 className="text-center text-2xl font-bold text-color1">Lokasi Desa Masaran</h2>
+          <div className="mt-5 grid items-center">
             <ImagePlaceholder label="Placeholder Peta Desa Masaran" className="h-64 rounded-2xl border border-color4/70" />
-            <div className="space-y-5 text-sm text-color5/80">
-              <p className="flex gap-4"><MapPin className="shrink-0 text-color1" size={24} /><span><strong className="block text-color1">Alamat</strong>Desa Masaran, Kecamatan Kebonagung,<br />Kabupaten Demak, Jawa Tengah</span></p>
-              <p className="flex gap-4"><Clock3 className="shrink-0 text-color1" size={24} /><span><strong className="block text-color1">Jam Pelayanan Kantor Desa</strong>Senin - Jumat<br />08.00 - 15.00 WIB</span></p>
-              <p className="flex gap-4"><Phone className="shrink-0 text-color1" size={24} /><span><strong className="block text-color1">Telepon Kantor</strong>(0291) 123456</span></p>
-            </div>
           </div>
         </section>
 

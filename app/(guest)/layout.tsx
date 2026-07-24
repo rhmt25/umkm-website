@@ -1,4 +1,4 @@
-import { TreePine, MapPin, Phone, Mail } from "lucide-react";
+import { TreePine, MapPin, Phone, Mail, LogIn } from "lucide-react";
 import Link from "next/link";
 import { FaYoutube as Youtube, FaFacebook as Facebook, FaInstagram as Instagram } from "react-icons/fa6";
 
@@ -31,7 +31,7 @@ export default function GuestLayout({ children }: { children: React.ReactNode })
             </span>
           </Link>
 
-          <nav className="hidden lg:flex items-center gap-10">
+          <nav className="hidden lg:flex items-center  gap-10">
             {navLinks.map((link) => (
               <Link
                 key={link.label}
@@ -41,14 +41,19 @@ export default function GuestLayout({ children }: { children: React.ReactNode })
                 {link.label}
               </Link>
             ))}
+
           </nav>
+          <Link href="/masuk" className="inline-flex items-center gap-2 rounded-lg bg-color1 px-6 py-3 text-sm font-semibold text-color3 hover:opacity-90 transition-opacity">
+            Masuk
+            <LogIn size={16} />
+          </Link>
         </div>
       </header>
 
       {children}
 
       <footer className="bg-color1 text-color3">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 grid md:grid-cols-5 gap-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 grid md:grid-cols-4 gap-10">
           <div className="md:col-span-2">
             <div className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-color3/70">
@@ -111,21 +116,11 @@ export default function GuestLayout({ children }: { children: React.ReactNode })
               </p>
             </div>
           </div>
-
-          <div className="md:col-span-5 lg:col-span-1">
-            <p className="text-xs font-semibold tracking-wide text-color4 uppercase mb-4">Temukan Kami</p>
-            <div className="relative h-32 w-full max-w-xs rounded-xl overflow-hidden bg-color3/10">
-              <div className="flex h-full w-full items-center justify-center bg-color3/10 text-color3/40 text-sm">
-                Peta Lokasi
-              </div>
-              <MapPin size={22} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 fill-red-500/20" />
-            </div>
-          </div>
         </div>
 
         <div className="border-t border-color3/15">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 text-center">
-            <p className="text-xs text-color3/60">© 2024 Desa Masaran. All Rights Reserved.</p>
+            <p className="text-xs text-color3/60">© 2026 UNNES GIAT 16 Desa Masaran. All Rights Reserved.</p>
           </div>
         </div>
       </footer>

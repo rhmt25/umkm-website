@@ -22,7 +22,7 @@ export default function ProductCard({ name, description, umkmName, href, price }
         <p className="mt-2 text-sm leading-6 text-color5/65 flex-grow min-h-12">
           {description}
         </p>
-        <p className="mt-4 text-lg font-bold text-color1">{price}</p>
+        <p className="mt-4 text-lg font-bold text-color1">Rp. {price}</p>
       </div>
     </article>
   );
