@@ -2,22 +2,16 @@
 
 import { FaWhatsapp as WhatsApp, FaFacebook as Facebook, FaInstagram as Instagram, FaTiktok as Tiktok } from "react-icons/fa6";
 import { SiGooglemaps as GoogleMaps, SiShopee as Shopee } from "react-icons/si";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import ProductCard from "@/components/ProductCard";
 import {
   ChevronLeft,
   ChevronRight,
-  Clock3,
-  Droplets,
   Images,
-  Leaf,
   MapPin,
   Phone,
-  ShieldCheck,
   Star,
   UtensilsCrossed,
-  Volume2,
 } from "lucide-react";
 
 // Custom Tokopedia SVG Icon since it's not exported in this project's react-icons version
@@ -228,11 +222,13 @@ export default function UmkmDetail({ slug }: { slug: string }) {
               <Images className="text-color1" size={24} />
               <h2 className="text-xl font-bold">Galeri UMKM</h2>
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Placeholder label="Foto UMKM 1" className="col-span-2 row-span-2 h-52 rounded-2xl border border-color4/70 sm:h-80" />
-              {[2, 3, 4, 5].map((number) => (
-                <Placeholder key={number} label={`Foto UMKM ${number}`} className="h-24 rounded-xl border border-color4/70 sm:h-[154px]" />
-              ))}
+            <div className="mt-5 grid gap-3 sm:grid-cols-[2fr_1fr]">
+              <Placeholder label="Foto UMKM 1" className="h-60 rounded-2xl border border-color4/70 sm:h-80" />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-1">
+                {[2, 3].map((number) => (
+                  <Placeholder key={number} label={`Foto UMKM ${number}`} className="h-28 rounded-xl border border-color4/70 sm:h-[154px]" />
+                ))}
+              </div>
             </div>
 
             <h2 className="mt-10 text-xl font-bold">Keunggulan Produk</h2>

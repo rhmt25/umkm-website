@@ -4,21 +4,32 @@ import Link from "next/link";
 import { Building2, ChevronLeft, Home, LayoutGrid, MapPinned, TreePine } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-const navigation = [
+const adminNavigation = [
   { label: "Beranda", href: "/admin", icon: Home },
   { label: "UMKM", href: "/admin/umkm", icon: Building2 },
   { label: "Kategori", href: "/admin/kategori", icon: LayoutGrid },
   { label: "Desa", href: "/admin/desa", icon: MapPinned },
 ];
 
-export default function AdminSidebar() {
+type AdminSidebarProps = {
+  role: "admin" | "umkm";
+  umkmId?: number;
+};
+
+export default function AdminSidebar({ role, umkmId }: AdminSidebarProps) {
   const pathname = usePathname();
+  const navigation = role === "admin"
+    ? adminNavigation
+    : [
+        { label: "Beranda", href: "/admin", icon: Home },
+        { label: "UMKM", href: "/admin/umkm/me", icon: Building2 },
+      ];
 
   return (
     <aside className="flex w-full shrink-0 flex-col bg-color1 text-color3 md:sticky md:top-0 md:h-screen md:w-72">
       <div className="flex items-center gap-3 border-b border-color3/15 px-6 py-6">
         <span className="grid h-11 w-11 place-items-center rounded-xl bg-color3 text-color1"><TreePine size={23} /></span>
-        <span><span className="block text-lg font-bold">UMKM Masaran</span><span className="text-xs text-color3/65">Panel Administrasi</span></span>
+        <span><span className="block text-lg font-bold">UMKM Masaran</span><span className="text-xs text-color3/65">{role === "admin" ? "Panel Administrasi" : "Panel UMKM"}</span></span>
       </div>
 
       <nav className="flex gap-2 overflow-x-auto px-4 py-5 md:block md:space-y-2 md:overflow-visible">

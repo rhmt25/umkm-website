@@ -152,9 +152,6 @@ export default function Page() {
               ))}
             </div>
 
-            <button aria-label="UMKM selanjutnya" className="hidden lg:flex absolute top-1/2 -right-5 -translate-y-1/2 h-10 w-10 items-center justify-center rounded-full bg-color3 border border-color4 shadow-md text-color1 hover:bg-color1 hover:text-color3 transition-colors">
-              <ChevronRight size={18} />
-            </button>
           </div>
         </div>
       </section>

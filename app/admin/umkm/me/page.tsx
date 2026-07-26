@@ -1,5 +1,5 @@
 import UmkmManagement from "@/components/UmkmManagement";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 const slotLabels: Record<string, string> = {
@@ -9,8 +9,7 @@ const slotLabels: Record<string, string> = {
   gambar_3: "Gambar UMKM 3",
 };
 
-export default async function Page({ params }: PageProps<"/admin/umkm/[id]">) {
-  const { id } = await params;
+export default async function Page() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -24,14 +23,28 @@ export default async function Page({ params }: PageProps<"/admin/umkm/[id]">) {
     .eq("id", user.id)
     .single();
 
+  if (profile?.role !== "umkm") redirect("/admin");
+
+  const { data: umkmResult } = await supabase
+    .from("umkm")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!umkmResult) redirect("/admin");
+
+  const id = String(umkmResult.id);
+  const { user_id, slug, created_at, updated_at, id: _id, ...form } = umkmResult;
+  const initialForm = Object.fromEntries(
+    Object.entries(form).map(([key, value]) => [key, value ?? ""]),
+  );
+
   const [
-    umkmResult,
     productsResult,
     categoriesResult,
     selectedCategoriesResult,
     imagesResult,
   ] = await Promise.all([
-    supabase.from("umkm").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("produk")
       .select("id,nama,deskripsi,harga")
@@ -42,17 +55,6 @@ export default async function Page({ params }: PageProps<"/admin/umkm/[id]">) {
     supabase.from("umkm_images").select("slot,storage_path").eq("umkm_id", id),
   ]);
 
-  if (!umkmResult.data) notFound();
-
-  if (profile?.role === "umkm" && umkmResult.data.user_id !== user.id) {
-    notFound();
-  }
-
-  const { user_id, slug, created_at, updated_at, id: _id, ...form } =
-    umkmResult.data;
-  const initialForm = Object.fromEntries(
-    Object.entries(form).map(([key, value]) => [key, value ?? ""]),
-  );
   const initialProducts = (productsResult.data ?? []).map((product) => ({
     id: product.id,
     name: product.nama,
@@ -86,7 +88,7 @@ export default async function Page({ params }: PageProps<"/admin/umkm/[id]">) {
       initialCategoryIds={(selectedCategoriesResult.data ?? []).map((item) =>
         String(item.kategori_id),
       )}
-      showBackLink={profile?.role === "admin"}
+      showBackLink={false}
     />
   );
 }
