@@ -1,6 +1,7 @@
 import { TreePine, MapPin, Phone, Mail, LogIn } from "lucide-react";
 import Link from "next/link";
 import { FaYoutube as Youtube, FaFacebook as Facebook, FaInstagram as Instagram } from "react-icons/fa6";
+import { createClient } from "@/lib/supabase/server";
 
 const navLinks = [
   { label: "BERANDA", href: "/" },
@@ -16,7 +17,23 @@ const footerMenu = [
   { label: "Tentang Desa", href: "/tentang-desa" },
 ];
 
-export default function GuestLayout({ children }: { children: React.ReactNode }) {
+export default async function GuestLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const { data: desa } = await supabase
+    .from("desa")
+    .select("alamat,no_telepon,email,facebook,instagram,youtube")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const address = desa?.alamat ?? "Desa Masaran, Kecamatan Bawang, Kabupaten Banjarnegara, Jawa Tengah, 53471";
+  const contactPhone = desa?.no_telepon ?? "082324666582";
+  const contactEmail = desa?.email ?? "desa.masaran@gmail.com";
+  const socialLinks = [
+    { Icon: Facebook, href: desa?.facebook ?? "https://facebook.com", label: "Facebook" },
+    { Icon: Instagram, href: desa?.instagram ?? "https://www.instagram.com/desamasaran/", label: "Instagram" },
+    { Icon: Youtube, href: desa?.youtube ?? "https://youtube.com", label: "YouTube" },
+  ];
+
   return (
     <div className="bg-color3 text-color5 min-h-screen">
       <header className="sticky top-0 z-50 bg-color3/95 backdrop-blur border-b border-color4/60">
@@ -67,11 +84,7 @@ export default function GuestLayout({ children }: { children: React.ReactNode })
             </p>
 
             <div className="mt-5 flex items-center gap-3">
-              {[
-                { Icon: Facebook, href: "https://facebook.com", label: "Facebook" },
-                { Icon: Instagram, href: "https://www.instagram.com/desamasaran/", label: "Instagram" },
-                { Icon: Youtube, href: "https://youtube.com", label: "YouTube" },
-              ].map(({ Icon, href, label }) => (
+              {socialLinks.map(({ Icon, href, label }) => (
                 <a
                   key={label}
                   href={href}
@@ -104,15 +117,15 @@ export default function GuestLayout({ children }: { children: React.ReactNode })
             <div className="space-y-2.5 text-sm text-color3/70">
               <p className="flex items-start gap-2">
                 <MapPin size={14} className="mt-0.5 shrink-0" />
-                Desa Masaran, Kecamatan Bawang, Kabupaten Banjarnegara, Jawa Tengah, 53471
+                {address}
               </p>
               <p className="flex items-center gap-2">
                 <Phone size={14} className="shrink-0" />
-                082324666582
+                {contactPhone}
               </p>
               <p className="flex items-center gap-2">
                 <Mail size={14} className="shrink-0" />
-                desa.masaran@gmail.com
+                {contactEmail}
               </p>
             </div>
           </div>

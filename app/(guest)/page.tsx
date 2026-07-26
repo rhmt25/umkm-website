@@ -1,5 +1,4 @@
-"use client";
-
+import Link from "next/link";
 import {
   ArrowRight,
   Store,
@@ -7,70 +6,13 @@ import {
   Award,
   HeartHandshake,
   Leaf,
-  ChevronRight,
   Briefcase,
   BadgeCheck,
   Heart,
   Users,
 } from "lucide-react";
 import UmkmCard from "@/components/UmkmCard";
-
-const stats = [
-  { icon: Store, value: "120+", label: "UMKM Terdaftar" },
-  { icon: Package, value: "530+", label: "Produk" },
-  { icon: Award, value: "15+", label: "Kategori" },
-  { icon: HeartHandshake, value: "100%", label: "Produk Lokal" },
-];
-
-const umkmList = [
-  {
-    name: "Keripik Bu Sri",
-    owner: "Sri Rahayu",
-    category: "Makanan & Minuman",
-    location: "Dusun Jetis, Masaran",
-  },
-  {
-    name: "Dapoer Mak Tun",
-    owner: "Sutini",
-    category: "Makanan & Minuman",
-    location: "Dusun Ngaran, Masaran",
-  },
-  {
-    name: "Batik Masaran",
-    owner: "Agus Setiawan",
-    category: "Kerajinan",
-    location: "Dusun Pucung, Masaran",
-  },
-  {
-    name: "Madu Masaran",
-    owner: "Budi Santoso",
-    category: "Makanan & Minuman",
-    location: "Dusun Sumber, Masaran",
-  },
-];
-
-const highlights = [
-  {
-    icon: Briefcase,
-    title: "Mendukung Ekonomi Lokal",
-    desc: "Setiap pembelian membantu pertumbuhan ekonomi masyarakat desa.",
-  },
-  {
-    icon: BadgeCheck,
-    title: "Produk Berkualitas",
-    desc: "UMKM Desa Masaran menyediakan produk berkualitas dan terpercaya.",
-  },
-  {
-    icon: Heart,
-    title: "Dikelola dengan Hati",
-    desc: "Dikerjakan oleh masyarakat lokal dengan dedikasi dan keterampilan terbaik.",
-  },
-  {
-    icon: Users,
-    title: "Desa Maju, Kita Maju",
-    desc: "Bersama membangun desa yang mandiri, sejahtera, dan berkelanjutan.",
-  },
-];
+import { createClient } from "@/lib/supabase/server";
 
 function ImagePlaceholder({
   className = "",
@@ -86,7 +28,47 @@ function ImagePlaceholder({
   );
 }
 
-export default function Page() {
+export default async function Page() {
+  const supabase = await createClient();
+
+  const [latestUmkmResult, productCountResult, categoryResult, umkmCountResult] = await Promise.all([
+    supabase
+      .from("umkm")
+      .select("id,slug,nama,pemilik,dusun")
+      .order("created_at", { ascending: false })
+      .limit(4),
+    supabase.from("produk").select("id", { count: "exact", head: true }),
+    supabase.from("kategori").select("id"),
+    supabase.from("umkm").select("id", { count: "exact", head: true }),
+  ]);
+
+  const latestUmkms = latestUmkmResult.data ?? [];
+  const umkmIds = latestUmkms.map((item) => item.id);
+
+  const logoResult =
+    umkmIds.length > 0
+      ? await supabase
+          .from("umkm_images")
+          .select("umkm_id,storage_path")
+          .in("umkm_id", umkmIds)
+          .eq("slot", "logo")
+      : { data: [] };
+
+  const logoMap = new Map<number, string>();
+  for (const image of logoResult.data ?? []) {
+    const publicUrl = supabase.storage.from("umkm-media").getPublicUrl(image.storage_path).data.publicUrl;
+    if (publicUrl) {
+      logoMap.set(image.umkm_id, publicUrl);
+    }
+  }
+
+  const stats = [
+    { icon: Store, value: `${umkmCountResult.count ?? latestUmkms.length}`, label: "UMKM Terdaftar" },
+    { icon: Package, value: `${productCountResult.count ?? 0}`, label: "Produk" },
+    { icon: Award, value: `${categoryResult.data?.length ?? 0}`, label: "Kategori" },
+    { icon: HeartHandshake, value: "100%", label: "Produk Lokal" },
+  ];
+
   return (
     <main className="bg-color3 text-color5">
       <section className="relative overflow-hidden">
@@ -105,10 +87,10 @@ export default function Page() {
               Temukan berbagai produk unggulan dari UMKM Desa Masaran. Dukung produk lokal, wujudkan ekonomi desa yang mandiri.
             </p>
 
-            <a href="#" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-color1 px-6 py-3 text-sm font-semibold text-color3 hover:opacity-90 transition-opacity">
+            <Link href="/umkm" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-color1 px-6 py-3 text-sm font-semibold text-color3 hover:opacity-90 transition-opacity">
               Jelajahi UMKM
               <ArrowRight size={16} />
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -139,19 +121,26 @@ export default function Page() {
               </h2>
               <p className="mt-1 text-sm text-color5/60">UMKM yang baru bergabung di Desa Masaran</p>
             </div>
-            <a href="#" className="inline-flex items-center gap-1.5 rounded-lg border border-color1 px-5 py-2 text-sm font-semibold text-color1 hover:bg-color1 hover:text-color3 transition-colors">
+            <Link href="/umkm" className="inline-flex items-center gap-1.5 rounded-lg border border-color1 px-5 py-2 text-sm font-semibold text-color1 hover:bg-color1 hover:text-color3 transition-colors">
               Lihat Semua UMKM
               <ArrowRight size={14} />
-            </a>
+            </Link>
           </div>
 
           <div className="relative">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-              {umkmList.map((u) => (
-                <UmkmCard key={u.name} name={u.name} owner={u.owner} category={u.category} location={u.location} />
+              {latestUmkms.map((umkm) => (
+                <UmkmCard
+                  key={umkm.id}
+                  name={umkm.nama}
+                  owner={umkm.pemilik}
+                  category="UMKM"
+                  location={umkm.dusun ? `Dusun ${umkm.dusun}` : "Desa Masaran"}
+                  image={logoMap.get(umkm.id)}
+                  href={`/umkm/${umkm.slug}`}
+                />
               ))}
             </div>
-
           </div>
         </div>
       </section>
@@ -162,15 +151,34 @@ export default function Page() {
             <ImagePlaceholder label="Ilustrasi Lapak Pasar" className="aspect-[4/3] w-full rounded-2xl" />
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-              {highlights.map(({ icon: Icon, title, desc }) => (
-                <div key={title}>
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
-                    <Icon size={20} className="text-color1" />
-                  </span>
-                  <p className="font-semibold text-sm text-color5">{title}</p>
-                  <p className="text-xs text-color5/55 mt-1.5 leading-relaxed">{desc}</p>
-                </div>
-              ))}
+              <div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
+                  <Briefcase size={20} className="text-color1" />
+                </span>
+                <p className="font-semibold text-sm text-color5">Mendukung Ekonomi Lokal</p>
+                <p className="text-xs text-color5/55 mt-1.5 leading-relaxed">Setiap pembelian membantu pertumbuhan ekonomi masyarakat desa.</p>
+              </div>
+              <div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
+                  <BadgeCheck size={20} className="text-color1" />
+                </span>
+                <p className="font-semibold text-sm text-color5">Produk Berkualitas</p>
+                <p className="text-xs text-color5/55 mt-1.5 leading-relaxed">UMKM Desa Masaran menyediakan produk berkualitas dan terpercaya.</p>
+              </div>
+              <div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
+                  <Heart size={20} className="text-color1" />
+                </span>
+                <p className="font-semibold text-sm text-color5">Dikelola dengan Hati</p>
+                <p className="text-xs text-color5/55 mt-1.5 leading-relaxed">Dikerjakan oleh masyarakat lokal dengan dedikasi dan keterampilan terbaik.</p>
+              </div>
+              <div>
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
+                  <Users size={20} className="text-color1" />
+                </span>
+                <p className="font-semibold text-sm text-color5">Desa Maju, Kita Maju</p>
+                <p className="text-xs text-color5/55 mt-1.5 leading-relaxed">Bersama membangun desa yang mandiri, sejahtera, dan berkelanjutan.</p>
+              </div>
             </div>
           </div>
         </div>
