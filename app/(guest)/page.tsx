@@ -161,7 +161,7 @@ export default async function Page() {
       <section className="bg-color3 pb-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-3xl bg-gradient-to-r from-color1/[0.06] via-color1/[0.12] to-color1/[0.12] p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10 items-center">
-            <img src="/ilustrasi.png" className="aspect-[4/3] w-full rounded-2xl" />
+            <img src="/ilustrasi.webp" className="aspect-[4/3] w-full rounded-2xl" />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               <div>
