@@ -161,33 +161,33 @@ export default async function Page() {
       <section className="bg-color3 pb-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-3xl bg-gradient-to-r from-color1/[0.06] via-color1/[0.12] to-color1/[0.12] p-8 lg:p-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div>
+            <div className="flex flex-col items-center justify-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
                 <Briefcase size={20} className="text-color1" />
               </span>
               <p className="font-semibold text-sm text-color5">Mendukung Ekonomi Lokal</p>
-              <p className="text-xs text-color5/55 mt-1.5 leading-relaxed">Setiap pembelian membantu pertumbuhan ekonomi masyarakat desa.</p>
+              <p className="text-xs text-color5/55 mt-1.5 leading-relaxed text-center">Setiap pembelian membantu pertumbuhan ekonomi masyarakat desa.</p>
             </div>
-            <div>
+            <div className="flex flex-col items-center justify-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
                 <BadgeCheck size={20} className="text-color1" />
               </span>
               <p className="font-semibold text-sm text-color5">Produk Berkualitas</p>
-              <p className="text-xs text-color5/55 mt-1.5 leading-relaxed">UMKM Desa Masaran menyediakan produk berkualitas dan terpercaya.</p>
+              <p className="text-xs text-color5/55 mt-1.5 leading-relaxed text-center">UMKM Desa Masaran menyediakan produk berkualitas dan terpercaya.</p>
             </div>
-            <div>
+            <div className="flex flex-col items-center justify-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
                 <Heart size={20} className="text-color1" />
               </span>
               <p className="font-semibold text-sm text-color5">Dikelola dengan Hati</p>
-              <p className="text-xs text-color5/55 mt-1.5 leading-relaxed">Dikerjakan oleh masyarakat lokal dengan dedikasi dan keterampilan terbaik.</p>
+              <p className="text-xs text-color5/55 mt-1.5 leading-relaxed text-center">Dikerjakan oleh masyarakat lokal dengan dedikasi dan keterampilan terbaik.</p>
             </div>
-            <div>
+            <div className="flex flex-col items-center justify-center">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
                 <Users size={20} className="text-color1" />
               </span>
               <p className="font-semibold text-sm text-color5">Desa Maju, Kita Maju</p>
-              <p className="text-xs text-color5/55 mt-1.5 leading-relaxed">Bersama membangun desa yang mandiri, sejahtera, dan berkelanjutan.</p>
+              <p className="text-xs text-color5/55 mt-1.5 leading-relaxed text-center">Bersama membangun desa yang mandiri, sejahtera, dan berkelanjutan.</p>
             </div>
           </div>
         </div>
