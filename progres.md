@@ -1,211 +1,136 @@
 # Progres Website UMKM Desa Masaran
 
-Catatan ini adalah konteks kerja untuk melanjutkan pengembangan oleh agent lain.
+Dokumen ini adalah ringkasan kondisi proyek terbaru agar agent atau developer lain dapat melanjutkan pekerjaan tanpa kehilangan konteks.
 
-## Todo list
+Terakhir diperbarui: 28 Juli 2026
 
-| # | Tugas | Status |
-|---|-------|--------|
-| 1 | CRUD profil, produk, dan gambar di `UmkmManagement.tsx` | ✅ Selesai |
-| 2 | CRUD admin Desa + semua gambar desa | ✅ Selesai |
-| 3 | Daftar UMKM admin → Server Component + otorisasi UMKM | ✅ Selesai |
-| 4 | Hubungkan semua halaman guest ke Supabase | ⬜ Belum |
-| 5 | Uji hak akses, upload, login, pagination | ⬜ Belum |
-| 6 | UI loading/error/sukses yang ramah (form tambah UMKM) | ⬜ Belum |
-| 7 | Verifikasi: `tsc`, lint, `npm run build` | ⬜ Belum |
-| 8 | Deploy ke Vercel dengan environment variable | ⬜ Belum |
-| 9 | Perbaiki login UMKM nomor HP | ✅ Selesai |
+## Gambaran sistem
 
-## Tujuan aplikasi
+- Framework: Next.js (App Router), React, TypeScript, Tailwind CSS.
+- Database, autentikasi, dan penyimpanan gambar: Supabase.
+- Hosting target: Vercel.
+- Ada dua peran pengguna:
+  - **Admin** mengelola seluruh UMKM, kategori, dan data desa.
+  - **UMKM** masuk menggunakan nomor WhatsApp dan password, lalu hanya dapat mengelola data UMKM miliknya sendiri.
+- Admin masuk menggunakan username dan password.
+- Foto disimpan pada Supabase Storage, bukan di server Vercel.
 
-Website promosi UMKM Desa Masaran dengan dua jenis pengguna:
+## Struktur data utama
 
-- **Admin**: mengelola seluruh UMKM, kategori, data desa, produk, dan foto.
-- **UMKM**: masuk dengan nomor HP serta password, lalu hanya mengelola profil, kategori, produk, dan fotonya sendiri.
-- **Guest/pengunjung**: melihat daftar UMKM, detail UMKM, produk, dan informasi desa.
+- `umkm`: profil UMKM, informasi kontak, keunggulan, dan `slug`.
+- `products`: produk yang dimiliki satu UMKM.
+- `categories`: master kategori.
+- `umkm_categories`: relasi banyak-ke-banyak antara UMKM dan kategori.
+- `umkm_images`: logo serta gambar galeri UMKM.
+- `desa`: data profil desa.
+- `desa_images`: gambar Balai Desa dan galeri desa, termasuk kolom `deskripsi`.
+- `profiles`: penghubung akun Supabase Auth dengan peran admin atau UMKM.
 
-Stack yang dipakai:
+## Yang sudah selesai
 
-- Next.js 16.2.10, React 19, TypeScript, Tailwind CSS 4.
-- Supabase: Auth, PostgreSQL, Storage, dan RLS.
-- Vercel: target deployment.
+### Fondasi Supabase dan autentikasi
 
-## Keputusan penting
+- [x] Konfigurasi Supabase browser, server, admin, dan middleware/proxy.
+- [x] Contoh environment variable tersedia pada `.env.example`.
+- [x] Login admin dengan username/password.
+- [x] Login UMKM dengan nomor WhatsApp/password.
+- [x] Proteksi halaman admin berdasarkan peran pengguna.
+- [x] Admin dapat membuat akun login UMKM dari form tambah UMKM.
+- [x] Rancangan tabel, relasi, Storage bucket, dan RLS tersedia pada migration Supabase.
 
-- Admin membuat akun UMKM; tidak ada pendaftaran UMKM mandiri.
-- UMKM login memakai **nomor HP + password**.
-- Admin terlihat login dengan **username + password**. Secara internal akun admin memakai email Supabase Auth, misalnya `admin@auth.umkm.local`.
-- Password **tidak boleh** disimpan pada tabel `umkm` atau tabel admin biasa. Password dikelola Supabase Auth.
-- Foto promosi disimpan di **Supabase Storage**, bukan Vercel.
-- Bucket media bernama `umkm-media`, bersifat publik untuk ditampilkan di halaman guest. Unggah/ganti/hapus dibatasi melalui RLS.
-- Foto per UMKM maksimal **4 slot**: `logo`, `gambar_1`, `gambar_2`, `gambar_3`.
-- Gambar desa: 1 balai desa (`desa.balai_desa_path`) + 6 galeri (`desa_images` urutan 1–6).
-- Gambar hanya JPEG/JPG/PNG maksimal 2 MB.
-- Kolom jam operasional sudah dihilangkan dari form frontend dan tidak digunakan.
-- Upload gambar desa memakai **admin client** (service-role) karena RLS Storage saat ini hanya mengizinkan path `umkm/<id>/` untuk user authenticated.
+### Halaman admin
 
-## Konfigurasi Supabase
+- [x] Layout admin terpisah dari layout guest dengan sidebar.
+- [x] Dashboard admin dan dashboard UMKM dibedakan; kartu jumlah UMKM tetap tampil hanya untuk admin.
+- [x] Daftar UMKM admin memakai data Supabase dan logo dari Storage bila tersedia.
+- [x] Form tambah UMKM membuat data UMKM dan akun login terkait.
+- [x] Manajemen UMKM menyimpan dan memuat data profil asli.
+- [x] CRUD produk per UMKM, termasuk pencarian dan pagination maksimal 9 produk per halaman.
+- [x] Pemilihan banyak kategori memakai `react-select` dan tersimpan pada relasi database.
+- [x] Upload/ganti/hapus gambar UMKM: maksimal 4 gambar (Logo + Gambar 1--3), JPEG/JPG/PNG maksimal 2 MB.
+- [x] CRUD kategori dengan pencarian, mode tambah/edit, hapus, dan pagination maksimal 10 data.
+- [x] Seluruh input form data memiliki batas karakter di antarmuka serta validasi server; field harga dan RT/RW juga dibatasi ke angka.
+- [x] Constraint panjang data untuk Supabase tersedia pada `supabase/migrations/20260729090000_add_form_length_constraints.sql`.
+- [x] Manajemen data desa tersambung Supabase.
+- [x] Upload Balai Desa dan Gambar Desa 1--6, deskripsi per gambar, simpan/batal, serta pratinjau gambar besar.
 
-File yang relevan:
+### Halaman guest
 
-- `.env.example`: contoh environment variable.
-- `.env.local`: dibuat pengguna secara lokal dan tidak boleh di-commit.
-- `supabase/migrations/20260726100000_initial_schema.sql`: migration utama.
-- `supabase/README.md`: petunjuk setup project dan admin awal.
+- [x] Beranda mengambil UMKM terbaru dan logo dari Supabase.
+- [x] Daftar UMKM mengambil data dari Supabase.
+- [x] Daftar produk mengambil produk dan UMKM terkait dari Supabase.
+- [x] Detail UMKM memakai data Supabase, kategori, produk, dan galeri gambar.
+- [x] Halaman Tentang Desa memakai data desa dan galeri dari Supabase.
+- [x] Logo pada kartu UMKM menggunakan logo tersimpan; bila belum ada akan menampilkan placeholder “UMKM Desa Masaran”.
+- [x] Gambar galeri UMKM dan desa dapat diklik untuk membuka popup layar penuh.
+- [x] Popup gambar memakai komponen bersama `components/ImageLightbox.tsx`; gambar dipasang dengan elemen gambar biasa agar tidak lagi menjadi layar hitam.
 
-Environment yang dibutuhkan:
+### Slug URL UMKM
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
-SUPABASE_SERVICE_ROLE_KEY=...
-```
+- [x] Detail UMKM tersedia pada route `/(guest)/umkm/[slug]`.
+- [x] Slug baru dibuat dari nama UMKM, contoh `Keripik Bu Sri` menjadi `keripik-bu-sri`.
+- [x] Bila nama sudah dipakai, slug baru menjadi `keripik-bu-sri-[id]`.
+- [x] URL pada kartu guest sudah mengarah ke slug tersebut.
+- [x] Migration untuk membersihkan slug lama tersedia pada `supabase/migrations/20260728090000_desa_image_descriptions_and_clean_slugs.sql`.
 
-Catatan URL: URL Supabase harus root project, bukan endpoint REST. Kode juga sudah menormalisasi URL yang berakhiran `/rest/v1/`.
+## Pekerjaan yang masih perlu dilakukan
 
-Jangan pernah menaruh `SUPABASE_SERVICE_ROLE_KEY` di Client Component, kode browser, Git, atau chat.
+### Wajib sebelum data produksi dipakai
 
-## Skema database yang dibuat
+- [ ] Jalankan migration SQL terbaru di Supabase bila belum dilakukan, terutama untuk:
+  - menambah `desa_images.deskripsi`;
+  - mengonversi slug lama ke format baru;
+  - memastikan constraint slug memakai format slug dengan tanda hubung.
+- [ ] Pastikan Storage bucket dan policy upload/baca sudah dibuat melalui migration atau SQL Dashboard Supabase.
+- [ ] Isi environment variable Supabase pada Vercel saat deployment.
+- [ ] Uji deployment production di Vercel setelah environment variable tersedia.
 
-Migration membuat tabel berikut:
+### Pengujian fungsional yang perlu dilakukan manual
 
-- `profiles`: role `admin` / `umkm`, username dan email internal admin.
-- `umkm`: profil usaha dengan `user_id` ke `profiles.id`.
-- `kategori`.
-- `umkm_kategori`: relasi banyak-ke-banyak UMKM dan kategori.
-- `produk`: relasi ke `umkm` melalui `id_umkm`.
-- `umkm_images`: path Storage untuk logo + 3 gambar.
-- `desa`: satu data profil desa.
-- `desa_images`: gambar balai desa + 6 gambar galeri.
+- [ ] Uji login sebagai admin dan sebagai UMKM.
+- [ ] Uji admin membuat UMKM baru, kemudian login memakai nomor WhatsApp dan password UMKM tersebut.
+- [ ] Uji satu UMKM tidak dapat membuka atau mengubah data UMKM lain melalui URL.
+- [ ] Uji tambah, ubah, dan hapus kategori, produk, gambar UMKM, serta gambar desa.
+- [ ] Uji upload file tidak valid, file di atas 2 MB, dan penggantian gambar lama.
+- [ ] Uji halaman guest saat data belum lengkap: tanpa logo, tanpa produk, tanpa galeri, dan tanpa deskripsi gambar.
+- [ ] Uji semua link navigasi pada desktop dan layar ponsel.
 
-Migration juga membuat:
+### Penyempurnaan yang disarankan
 
-- RLS untuk data publik, admin, dan UMKM pemilik.
-- Bucket `umkm-media` dengan batas 2 MB dan MIME type JPEG/PNG.
-- Helper database `is_admin`, `owns_umkm`, dan `can_manage_umkm_storage`.
+- [ ] Tambahkan notifikasi sukses/gagal yang lebih konsisten pada seluruh form CRUD bila masih ada form yang hanya menampilkan pesan umum.
+- [ ] Tambahkan halaman atau state kosong yang lebih informatif untuk daftar UMKM/produk/kategori tanpa data.
+- [ ] Pertimbangkan pagination atau pencarian sisi server jika jumlah UMKM dan produk sudah besar.
+- [ ] Tambahkan validasi server yang lebih lengkap untuk nomor WhatsApp, tautan media sosial, dan harga produk.
+- [ ] Tambahkan fitur ubah password yang aman untuk admin maupun UMKM bila diperlukan.
+- [ ] Tambahkan reset password melalui email/WhatsApp bila fitur ini dibutuhkan di masa depan.
+- [ ] Buat halaman 404 yang lebih ramah untuk slug UMKM yang tidak ditemukan.
+- [ ] Putuskan kebijakan perubahan slug: saat ini slug dibuat saat UMKM dibuat dan **tidak otomatis berubah ketika nama UMKM diubah**, agar tautan lama tidak rusak.
 
-## Struktur koneksi Supabase
+## Catatan penting Supabase
 
-- `lib/supabase/client.ts`: client browser. Harus memakai akses langsung `process.env.NEXT_PUBLIC_*` agar variabel masuk ke bundle browser.
-- `lib/supabase/server.ts`: client Server Component/Server Action menggunakan cookies.
-- `lib/supabase/admin.ts`: client service-role untuk provisioning akun. Server-only secara penggunaan; jangan impor di Client Component.
-- `lib/supabase/proxy.ts` dan `proxy.ts`: refresh sesi Supabase untuk `/admin/*` dan `/masuk`.
+- Jangan pernah memasukkan `SUPABASE_SERVICE_ROLE_KEY` ke variabel dengan awalan `NEXT_PUBLIC_`.
+- Hanya `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` yang boleh tersedia di browser.
+- Gunakan service role hanya pada Server Action/server-side untuk membuat akun Auth atau operasi administratif.
+- Gambar publik promosi dapat dibaca dari Storage; operasi tulis/hapus harus tetap dibatasi oleh policy dan pemeriksaan peran di server.
+- Jika slug lama masih ada, jalankan SQL migration terbaru. Jangan memakai temporary slug dengan awalan garis bawah karena melanggar constraint `umkm_slug_format`.
 
-## Yang sudah berfungsi dengan Supabase
+## Berkas penting
 
-### Autentikasi
-
-- Halaman `app/(guest)/masuk/page.tsx` menerima nomor HP atau username + password.
-- Action `app/(guest)/masuk/actions.ts`:
-  - Nomor HP: login Supabase dengan phone/password.
-  - Username admin: mencari `profiles.login_email` dengan service-role lalu login email/password.
-  - Admin diarahkan ke `/admin`.
-  - UMKM diarahkan ke `/admin/umkm/[id]` miliknya.
-- `app/admin/layout.tsx` memeriksa sesi dan role.
-- Sidebar menampilkan menu berbeda untuk admin dan UMKM.
-
-### Dashboard
-
-- `app/admin/page.tsx` menghitung total UMKM, kategori, dan produk dari database.
-- Kartu **Total UMKM** hanya muncul bagi admin.
-- Dashboard UMKM tidak menampilkan kartu Total UMKM.
-
-### Kategori admin
-
-- `app/admin/kategori/page.tsx` mengambil kategori dari tabel `kategori`.
-- `components/CategoryManager.tsx` menyediakan pencarian dan pagination 10 item.
-- `app/admin/kategori/actions.ts` menyediakan tambah, edit, hapus kategori dengan validasi role admin.
-- Penghapusan kategori akan gagal bila masih digunakan oleh UMKM karena foreign key database.
-
-### Tambah UMKM
-
-- `app/admin/umkm/tambah/actions.ts` membuat:
-  1. User Supabase Auth phone/password (`phone_confirm: true`, tanpa SMS).
-  2. Profil role `umkm`.
-  3. Baris profil pada tabel `umkm`.
-  4. Slug unik.
-- Jika tahap berikutnya gagal, action berusaha membersihkan user/profil yang baru dibuat.
-- Sesudah berhasil, admin diarahkan ke `/admin/umkm/[id]`.
-
-### Daftar UMKM admin
-
-- `app/admin/umkm/page.tsx` tidak lagi memakai array UMKM dummy.
-- Mengambil data `umkm`, kategori relasi, dan logo dari Supabase.
-- Pencarian/pagination masih dikelola di client setelah data diambil.
-
-### Manajemen UMKM (CRUD penuh)
-
-- `app/admin/umkm/[id]/page.tsx` memuat profil UMKM, produk, kategori, dan gambar dari Supabase.
-- User UMKM tidak bisa membuka UMKM milik orang lain (`notFound()`).
-- `app/admin/umkm/[id]/actions.ts`:
-  - `updateUmkmProfile` — update tabel `umkm`, password, dan nomor HP Auth.
-  - `createProduct` / `updateProduct` / `deleteProduct` — CRUD produk.
-  - `uploadUmkmImage` / `deleteUmkmImage` — upload/hapus ke Storage `umkm-media`, upsert `umkm_images`.
-  - `updateUmkmCategories` — sinkron relasi kategori dengan error handling.
-- `components/UmkmManagement.tsx` — form profil, kategori, gambar, dan produk terhubung ke Server Actions dengan loading/error/sukses.
-
-### Halaman Desa admin (CRUD penuh)
-
-- `app/admin/desa/page.tsx` — Server Component, hanya role admin (`redirect` jika bukan admin).
-- `app/admin/desa/actions.ts`:
-  - `updateDesaProfile` — simpan ke tabel `desa` (`id = 1`).
-  - `uploadBalaiDesaImage` / `deleteBalaiDesaImage` — balai desa ke `desa.balai_desa_path`.
-  - `uploadDesaGalleryImage` / `updateDesaGalleryDescription` / `deleteDesaGalleryImage` — galeri urutan 1–6 ke `desa_images`.
-  - Upload Storage memakai admin client (path `desa/...`) karena RLS Storage belum mencakup path desa.
-- `components/DesaManagement.tsx` — UI client dengan loading/error/sukses, preview gambar, hapus gambar.
-
-## Bagian yang BELUM selesai / masih dummy
-
-### 1. Halaman guest masih dummy
-
-File yang masih perlu dihubungkan:
-
-- `app/(guest)/page.tsx` (beranda).
-- `app/(guest)/umkm/page.tsx` (daftar UMKM; masih `umkmData` dummy).
-- `components/UmkmDetail.tsx` (profil, galeri, manfaat, dan produk masih dummy).
-- `app/(guest)/produk/page.tsx` (produk masih dummy).
-- `app/(guest)/tentang-desa/page.tsx` (data desa dan galeri masih dummy).
-
-Target:
-
-- Jadikan page Server Component yang mengambil data Supabase.
-- Halaman detail memakai slug dari tabel `umkm`.
-- Gunakan `umkm_images` untuk logo/galeri; gunakan `produk` untuk daftar produk maksimal 12 per halaman.
-- Gunakan `desa` dan `desa_images` untuk Tentang Desa.
-- Pencarian/filter dapat memakai `searchParams` di server atau client setelah menerima data nyata.
-
-### 2. Daftar UMKM admin perlu penyempurnaan
-
-- Sudah mengambil data nyata, tetapi masih query di Client Component.
-- Lebih baik pindahkan query ke Server Component atau server data layer agar tidak bergantung pada public key di browser dan lebih mudah menangani error/loading.
-- Tambahkan penanganan error dari Supabase; saat ini kode terutama menangani data kosong.
-
-### 3. Form tambah UMKM perlu penyempurnaan
-
-- Foto belum diunggah langsung pada form tambah. Saat ini foto diunggah setelah redirect ke Manajemen UMKM; ini adalah keputusan sementara yang aman karena ID UMKM sudah tersedia.
-- Tambahkan tampilan pesan error yang ramah (`useActionState`) daripada error Server Action mentah.
-- Tambahkan pilihan kategori saat tambah UMKM, atau biarkan pengguna memilih sesudah dibuat di manajemen UMKM (saat ini pendekatan kedua).
-- Pastikan field wajib memiliki atribut `required` pada UI, terutama nama, pemilik, nomor WA, dan password.
-
-## Urutan lanjutan yang disarankan
-
-1. ~~Selesaikan CRUD profil, produk, dan gambar di `UmkmManagement.tsx`.~~ ✅
-2. ~~Selesaikan CRUD admin Desa + semua gambar desa.~~ ✅
-3. Ubah daftar UMKM admin menjadi server data fetch dan perbaiki otorisasi user UMKM.
-4. Hubungkan semua halaman guest ke Supabase dan hapus seluruh dummy data.
-5. Uji hak akses (admin vs UMKM), upload, ganti/hapus gambar, login, dan pagination.
-6. Tambahkan UI loading/error/sukses yang ramah (form tambah UMKM).
-7. Jalankan `npx.cmd tsc --noEmit`, lint, dan `npm run build`.
-8. Deploy ke Vercel: tambahkan tiga environment variable di Project Settings untuk Development, Preview, dan Production. Jangan deploy service-role key ke client; Vercel menyimpan environment server-side.
-
-## Catatan masalah yang pernah terjadi
-
-- Error `NEXT_PUBLIC_SUPABASE_URL belum diatur` di browser terjadi karena `client.ts` sebelumnya mengakses environment dengan key dinamis (`process.env[name]`). Next.js tidak memasukkan pola dinamis ke bundle browser. Sudah diperbaiki menjadi akses langsung `process.env.NEXT_PUBLIC_SUPABASE_URL`.
-- Jika `.env.local` diubah, server `npm run dev` harus dihentikan lalu dijalankan kembali.
-- User mungkin belum memiliki data UMKM; kondisi kosong harus menampilkan pesan normal, bukan error.
-- RLS Storage bucket `umkm-media` hanya mengizinkan upload path `umkm/<id>/` via `can_manage_umkm_storage`. Upload gambar desa (path `desa/...`) memakai admin client di Server Action setelah verifikasi role admin.
+| Keperluan | Lokasi |
+| --- | --- |
+| Dokumentasi progres ini | `progres.md` |
+| Migration database awal | `supabase/migrations/20260726100000_initial_schema.sql` |
+| Migration deskripsi gambar desa dan normalisasi slug | `supabase/migrations/20260728090000_desa_image_descriptions_and_clean_slugs.sql` |
+| Detail UMKM guest | `components/UmkmDetail.tsx` |
+| Manajemen UMKM | `components/UmkmManagement.tsx` |
+| Manajemen desa | `components/DesaManagement.tsx` |
+| Daftar UMKM admin | `components/AdminUmkmList.tsx` |
+| Kartu UMKM | `components/UmkmCard.tsx` |
+| Popup gambar bersama | `components/ImageLightbox.tsx` |
+| Galeri desa guest | `components/DesaGallery.tsx` |
+| Halaman Tentang Desa guest | `app/(guest)/tentang-desa/page.tsx` |
 
 ## Verifikasi terakhir
 
-- `npx.cmd tsc --noEmit` berhasil setelah CRUD Desa (27 Jul 2026).
-- Tidak ada migration yang dijalankan otomatis dari agent; migration dijalankan pengguna melalui SQL Editor Supabase.
+- TypeScript pernah berhasil diperiksa setelah perubahan fitur galeri dan CRUD terbaru.
+- Tetap jalankan pemeriksaan ulang (`npx tsc --noEmit`) serta build production sebelum deploy, terutama setelah mengubah environment variable, migration, atau dependency.

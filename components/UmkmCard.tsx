@@ -48,7 +48,7 @@ export default function UmkmCard({
             unoptimized
           />
         ) : (
-          <ImagePlaceholder label="Logo" className="w-full h-40" />
+          <ImagePlaceholder label="UMKM Desa Masaran" className="w-full h-40" />
         )}
       </div>
       <div className="p-5 flex flex-col items-center">

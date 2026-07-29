@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -31,7 +32,7 @@ function ImagePlaceholder({
 export default async function Page() {
   const supabase = await createClient();
 
-  const [latestUmkmResult, productCountResult, categoryResult, umkmCountResult] = await Promise.all([
+  const [latestUmkmResult, productCountResult, categoryResult, umkmCountResult, desaResult] = await Promise.all([
     supabase
       .from("umkm")
       .select("id,slug,nama,pemilik,dusun")
@@ -40,7 +41,13 @@ export default async function Page() {
     supabase.from("produk").select("id", { count: "exact", head: true }),
     supabase.from("kategori").select("id"),
     supabase.from("umkm").select("id", { count: "exact", head: true }),
+    supabase.from("desa").select("sampul_beranda_path").eq("id", 1).maybeSingle(),
   ]);
+
+  const coverPath = desaResult.data?.sampul_beranda_path;
+  const coverImageUrl = coverPath
+    ? supabase.storage.from("umkm-media").getPublicUrl(coverPath).data.publicUrl
+    : "";
 
   const latestUmkms = latestUmkmResult.data ?? [];
   const umkmIds = latestUmkms.map((item) => item.id);
@@ -72,7 +79,13 @@ export default async function Page() {
   return (
     <main className="bg-color3 text-color5">
       <section className="relative overflow-hidden">
-        <ImagePlaceholder label="Foto Pemandangan Desa Masaran" className="absolute inset-0 w-full h-full" />
+        {coverImageUrl ? (
+          <div className="absolute inset-0">
+            <Image src={coverImageUrl} alt="Pemandangan Desa Masaran" fill className="object-cover" unoptimized />
+          </div>
+        ) : (
+          <ImagePlaceholder label="Foto Pemandangan Desa Masaran" className="absolute inset-0 w-full h-full" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-r from-color3 via-color3/85 to-color3/10" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-28">

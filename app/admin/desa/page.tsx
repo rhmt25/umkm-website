@@ -15,9 +15,13 @@ const emptyForm: VillageForm = {
   instagram: "",
   tiktok: "",
   youtube: "",
+  username: "",
+  password: "",
 };
 
 function buildInitialGallery(
+  sampulBerandaUrl: string,
+  sampulTentangUrl: string,
   balaiUrl: string,
   galleryImages: { urutan: number; url: string; description: string }[],
 ): GalleryItem[] {
@@ -26,6 +30,18 @@ function buildInitialGallery(
   );
 
   return [
+    {
+      id: "sampul-beranda",
+      label: "Foto Sampul Beranda",
+      image: sampulBerandaUrl,
+      description: "",
+    },
+    {
+      id: "sampul-tentang",
+      label: "Foto Sampul Tentang Desa",
+      image: sampulTentangUrl,
+      description: "",
+    },
     {
       id: "balai",
       label: "Gambar Balai Desa",
@@ -55,7 +71,7 @@ export default async function Page() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, username")
     .eq("id", user.id)
     .single();
 
@@ -82,8 +98,20 @@ export default async function Page() {
         instagram: desa.instagram ?? "",
         tiktok: desa.tiktok ?? "",
         youtube: desa.youtube ?? "",
+        username: profile?.username ?? "",
+        password: "",
       }
-    : emptyForm;
+    : { ...emptyForm, username: profile?.username ?? "", password: "" };
+
+  const sampulBerandaUrl = desa?.sampul_beranda_path
+    ? supabase.storage.from("umkm-media").getPublicUrl(desa.sampul_beranda_path)
+        .data.publicUrl
+    : "";
+
+  const sampulTentangUrl = desa?.sampul_tentang_path
+    ? supabase.storage.from("umkm-media").getPublicUrl(desa.sampul_tentang_path)
+        .data.publicUrl
+    : "";
 
   const balaiUrl = desa?.balai_desa_path
     ? supabase.storage.from("umkm-media").getPublicUrl(desa.balai_desa_path)
@@ -97,7 +125,7 @@ export default async function Page() {
     description: item.deskripsi ?? "",
   }));
 
-  const initialGallery = buildInitialGallery(balaiUrl, galleryImages);
+  const initialGallery = buildInitialGallery(sampulBerandaUrl, sampulTentangUrl, balaiUrl, galleryImages);
 
   return (
     <DesaManagement initialForm={initialForm} initialGallery={initialGallery} />

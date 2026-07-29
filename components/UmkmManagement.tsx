@@ -28,31 +28,33 @@ import {
   updateUmkmProfile,
   uploadUmkmImage,
 } from "@/app/admin/umkm/[id]/actions";
+import { FORM_LIMITS, characterHint } from "@/lib/form-limits";
+import { useToast } from "@/components/ToastProvider";
 
 type UmkmForm = Record<(typeof formFields)[number][0], string>;
 type Product = { id: number; name: string; description: string; price: string };
 type UploadedImage = { name: string; url: string };
 
 const formFields = [
-  ["nama", "Nama UMKM", "text"],
-  ["pemilik", "Nama Pemilik", "text"],
-  ["rt", "RT", "text"],
-  ["rw", "RW", "text"],
-  ["dukuh", "Dukuh", "text"],
-  ["dusun", "Dusun", "text"],
-  ["alamat_lengkap", "Alamat Lengkap", "text"],
-  ["no_wa", "Nomor WhatsApp", "tel"],
-  ["instagram", "Instagram", "text"],
-  ["tiktok", "TikTok", "text"],
-  ["facebook", "Facebook", "text"],
-  ["shopee", "Shopee", "url"],
-  ["tokopedia", "Tokopedia", "url"],
-  ["google_maps", "Google Maps", "url"],
-  ["keunggulan1", "Keunggulan Produk 1", "text"],
-  ["keunggulan2", "Keunggulan Produk 2", "text"],
-  ["keunggulan3", "Keunggulan Produk 3", "text"],
-  ["keunggulan4", "Keunggulan Produk 4", "text"],
-  ["password", "Password", "password"],
+  ["nama", "Nama UMKM", "text", FORM_LIMITS.umkmName],
+  ["pemilik", "Nama Pemilik", "text", FORM_LIMITS.personName],
+  ["rt", "RT", "text", FORM_LIMITS.rtRw, "Hanya angka"],
+  ["rw", "RW", "text", FORM_LIMITS.rtRw, "Hanya angka"],
+  ["dukuh", "Dukuh", "text", FORM_LIMITS.villageName],
+  ["dusun", "Dusun", "text", FORM_LIMITS.villageName],
+  ["alamat_lengkap", "Alamat Lengkap", "text", FORM_LIMITS.address],
+  ["no_wa", "Nomor WhatsApp", "tel", FORM_LIMITS.phone, "Hanya angka, +, spasi, atau tanda -"],
+  ["instagram", "Instagram", "text", FORM_LIMITS.socialHandle],
+  ["tiktok", "TikTok", "text", FORM_LIMITS.socialHandle],
+  ["facebook", "Facebook", "text", FORM_LIMITS.socialHandle],
+  ["shopee", "Shopee", "url", FORM_LIMITS.url],
+  ["tokopedia", "Tokopedia", "url", FORM_LIMITS.url],
+  ["google_maps", "Google Maps", "url", FORM_LIMITS.url],
+  ["keunggulan1", "Keunggulan Produk 1", "text", FORM_LIMITS.advantage],
+  ["keunggulan2", "Keunggulan Produk 2", "text", FORM_LIMITS.advantage],
+  ["keunggulan3", "Keunggulan Produk 3", "text", FORM_LIMITS.advantage],
+  ["keunggulan4", "Keunggulan Produk 4", "text", FORM_LIMITS.advantage],
+  ["password", "Password", "password", FORM_LIMITS.password],
 ] as const;
 
 const defaultForm = Object.fromEntries(
@@ -87,6 +89,7 @@ function CategorySelector({
   umkmId: string;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [category, setCategory] = useState<CategoryOption | null>(null);
   const [selectedCategories, setSelectedCategories] = useState(selectedIds);
   const [loading, setLoading] = useState(false);
@@ -106,6 +109,7 @@ function CategorySelector({
     );
     setLoading(false);
     if (result.error) {
+      showToast(result.error, "error");
       setError(result.error);
       return;
     }
@@ -213,6 +217,7 @@ function ProductEditor({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+  const { showToast } = useToast();
   const changed = JSON.stringify(saved) !== JSON.stringify(draft);
 
   useEffect(() => {
@@ -233,10 +238,12 @@ function ProductEditor({
     });
     setSaving(false);
     if (result.error) {
+      showToast(result.error, "error");
       setError(result.error);
       return;
     }
     setSaved(draft);
+    showToast("Produk berhasil diperbarui.", "success");
     onSaved();
   }
 
@@ -247,10 +254,12 @@ function ProductEditor({
     const result = await deleteProduct(Number(umkmId), product.id);
     setDeleting(false);
     if (result.error) {
+      showToast(result.error, "error");
       setError(result.error);
       return;
     }
     onDeleted();
+    showToast("Produk berhasil dihapus.", "success");
   }
 
   return (
@@ -266,30 +275,36 @@ function ProductEditor({
           <span className="mb-1.5 block text-sm font-semibold">Nama Produk</span>
           <input
             value={draft.name}
+            maxLength={FORM_LIMITS.productName}
             onChange={(event) => update("name", event.target.value)}
             className="h-10 w-full rounded-lg border border-color4 px-3 outline-none focus:border-color1"
           />
+          <span className="mt-1 block text-xs text-color5/55">{characterHint(FORM_LIMITS.productName)}</span>
         </label>
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold">Deskripsi</span>
           <textarea
             value={draft.description}
+            maxLength={FORM_LIMITS.productDescription}
             onChange={(event) => update("description", event.target.value)}
             rows={2}
             className="w-full rounded-lg border border-color4 px-3 py-2 text-sm outline-none focus:border-color1"
           />
+          <span className="mt-1 block text-xs text-color5/55">{characterHint(FORM_LIMITS.productDescription)}</span>
         </label>
         <label className="block">
           <span className="mb-1.5 block text-sm font-semibold">Harga</span>
           <input
             value={draft.price}
             onChange={(event) =>
-              update("price", event.target.value.replace(/\D/g, ""))
+              update("price", event.target.value.replace(/\D/g, "").slice(0, FORM_LIMITS.productPriceDigits))
             }
+            maxLength={FORM_LIMITS.productPriceDigits}
             inputMode="numeric"
             placeholder="Contoh: 15000"
             className="h-10 w-full rounded-lg border border-color4 px-3 outline-none focus:border-color1"
           />
+          <span className="mt-1 block text-xs text-color5/55">Hanya angka • Maksimal {FORM_LIMITS.productPriceDigits} digit</span>
         </label>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -340,6 +355,7 @@ export default function UmkmManagement({
   showBackLink?: boolean;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const form = { ...defaultForm, ...initialForm, password: "" };
   const [savedForm, setSavedForm] = useState(form);
   const [draftForm, setDraftForm] = useState(form);
@@ -398,6 +414,8 @@ export default function UmkmManagement({
   );
 
   function updateForm(key: keyof UmkmForm, value: string) {
+    if (key === "rt" || key === "rw") value = value.replace(/\D/g, "");
+    if (key === "no_wa") value = value.replace(/[^\d+\s()-]/g, "");
     setDraftForm((current) => ({ ...current, [key]: value }));
     setFormSuccess("");
   }
@@ -409,6 +427,7 @@ export default function UmkmManagement({
     const result = await updateUmkmProfile(Number(umkmId), draftForm);
     setSavingForm(false);
     if (result.error) {
+      showToast(result.error, "error");
       setFormError(result.error);
       return;
     }
@@ -416,6 +435,7 @@ export default function UmkmManagement({
     setSavedForm(nextForm);
     setDraftForm(nextForm);
     setFormSuccess("Profil UMKM berhasil disimpan.");
+    showToast("Profil UMKM berhasil disimpan.", "success");
     router.refresh();
   }
 
@@ -427,6 +447,7 @@ export default function UmkmManagement({
       file.size > 2 * 1024 * 1024
     ) {
       setUploadError("Gambar harus berformat JPEG/JPG/PNG dan maksimal 2 MB.");
+      showToast("Gambar harus berformat JPEG/JPG/PNG dan maksimal 2 MB.", "error");
       event.target.value = "";
       return;
     }
@@ -453,6 +474,7 @@ export default function UmkmManagement({
       formData.set("file", file);
       const result = await uploadUmkmImage(Number(umkmId), slot, formData);
       if (result.error) {
+        showToast(result.error, "error");
         setUploadError(result.error);
         setSavingImages(false);
         return;
@@ -462,6 +484,7 @@ export default function UmkmManagement({
     setSavingImages(false);
     setPendingFiles({});
     setImageSuccess("Gambar berhasil disimpan.");
+    showToast("Gambar berhasil disimpan.", "success");
     router.refresh();
   }
 
@@ -489,11 +512,13 @@ export default function UmkmManagement({
     setSavingImages(false);
 
     if (result.error) {
+      showToast(result.error, "error");
       setUploadError(result.error);
       return;
     }
 
     setImageSuccess("Gambar berhasil dihapus.");
+    showToast("Gambar berhasil dihapus.", "success");
     router.refresh();
   }
 
@@ -507,10 +532,12 @@ export default function UmkmManagement({
     });
     setAddingProduct(false);
     if (result.error) {
+      showToast(result.error, "error");
       setProductError(result.error);
       return;
     }
     setProductPage(1);
+    showToast("Produk baru berhasil ditambahkan.", "success");
     router.refresh();
   }
 
@@ -526,9 +553,9 @@ export default function UmkmManagement({
       ) : null}
       <div className="mt-5">
         <p className="text-sm font-bold uppercase tracking-wide text-color1">
-          Manajemen UMKM #{umkmId}
+          Manajemen UMKM
         </p>
-        <h1 className="mt-1 text-3xl font-bold">Manajemen UMKM</h1>
+        <h1 className="mt-1 text-3xl font-bold">{savedForm.nama || "UMKM"}</h1>
         <p className="mt-2 text-color5/65">
           Perbarui profil usaha, gambar, dan produk yang dijual.
         </p>
@@ -546,20 +573,16 @@ export default function UmkmManagement({
           </p>
         )}
         <div className="mt-6 grid gap-5 md:grid-cols-2">
-          {formFields.map(([key, label, type]) => (
+          {formFields.map(([key, label, type, maxLength, format]) => (
             <label
               key={key}
               className={key === "alamat_lengkap" ? "md:col-span-2" : ""}
             >
               <span className="mb-2 block text-sm font-semibold">{label}</span>
-              {key === "password" && (
-                <span className="mb-2 block text-xs text-color5/55">
-                  Kosongkan jika tidak ingin mengubah password.
-                </span>
-              )}
               {key === "alamat_lengkap" ? (
                 <textarea
                   value={draftForm[key]}
+                  maxLength={maxLength}
                   onChange={(event) => updateForm(key, event.target.value)}
                   rows={3}
                   className="w-full rounded-xl border border-color4 px-4 py-3 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
@@ -568,6 +591,8 @@ export default function UmkmManagement({
                 <input
                   type={type}
                   value={draftForm[key]}
+                  maxLength={maxLength}
+                  inputMode={key === "rt" || key === "rw" ? "numeric" : undefined}
                   required={
                     key === "nama" || key === "pemilik" || key === "no_wa"
                   }
@@ -575,6 +600,11 @@ export default function UmkmManagement({
                   className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
                 />
               )}
+              <span className="mt-2 block text-xs text-color5/55">
+                {key === "password"
+                  ? `Kosongkan jika tidak ingin mengubah password. Maksimal ${maxLength} karakter.`
+                  : characterHint(maxLength, format)}
+              </span>
             </label>
           ))}
         </div>

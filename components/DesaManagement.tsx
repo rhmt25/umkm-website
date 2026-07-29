@@ -7,11 +7,17 @@ import { Camera, ExternalLink, ImagePlus, Save, Upload, X } from "lucide-react";
 import {
   deleteBalaiDesaImage,
   deleteDesaGalleryImage,
+  deleteSampulBerandaImage,
+  deleteSampulTentangImage,
   updateDesaGalleryDescription,
   updateDesaProfile,
   uploadBalaiDesaImage,
   uploadDesaGalleryImage,
+  uploadSampulBerandaImage,
+  uploadSampulTentangImage,
 } from "@/app/admin/desa/actions";
+import { FORM_LIMITS, characterHint } from "@/lib/form-limits";
+import { useToast } from "@/components/ToastProvider";
 
 export type VillageForm = {
   address: string;
@@ -23,6 +29,8 @@ export type VillageForm = {
   instagram: string;
   tiktok: string;
   youtube: string;
+  username: string;
+  password?: string;
 };
 
 export type GalleryItem = {
@@ -36,8 +44,10 @@ function cloneGallery(items: GalleryItem[]) {
   return items.map((item) => ({ ...item }));
 }
 
+const COVER_IDS = new Set(["sampul-beranda", "sampul-tentang", "balai"]);
+
 function galleryUrutan(id: string) {
-  if (id === "balai") return null;
+  if (COVER_IDS.has(id)) return null;
   const match = id.match(/^gambar-(\d+)$/);
   return match ? Number(match[1]) : null;
 }
@@ -50,6 +60,7 @@ export default function DesaManagement({
   initialGallery: GalleryItem[];
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [savedForm, setSavedForm] = useState(initialForm);
   const [draftForm, setDraftForm] = useState(initialForm);
   const [savedGallery, setSavedGallery] = useState(initialGallery);
@@ -83,6 +94,7 @@ export default function DesaManagement({
     Object.keys(pendingFiles).length > 0 || descriptionsChanged;
 
   function updateForm(key: keyof VillageForm, value: string) {
+    if (key === "phone") value = value.replace(/[^\d+\s()-]/g, "");
     setDraftForm((current) => ({ ...current, [key]: value }));
     setFormSuccess("");
   }
@@ -103,6 +115,7 @@ export default function DesaManagement({
       file.size > 2 * 1024 * 1024
     ) {
       setGalleryError("Gambar harus berformat JPEG/JPG/PNG dan maksimal 2 MB.");
+      showToast("Gambar harus berformat JPEG/JPG/PNG dan maksimal 2 MB.", "error");
       event.target.value = "";
       return;
     }
@@ -121,12 +134,16 @@ export default function DesaManagement({
     setSavingForm(false);
 
     if (result.error) {
+      showToast(result.error, "error");
       setFormError(result.error);
       return;
     }
 
-    setSavedForm(draftForm);
+    const nextSavedForm = { ...draftForm, password: "" };
+    setSavedForm(nextSavedForm);
+    setDraftForm(nextSavedForm);
     setFormSuccess("Data desa berhasil disimpan.");
+    showToast("Data desa berhasil disimpan.", "success");
     router.refresh();
   }
 
@@ -135,13 +152,21 @@ export default function DesaManagement({
     setGalleryError("");
     setGallerySuccess("");
 
+    const coverUploadActions: Record<string, (fd: FormData) => Promise<{ error: string | null }>> = {
+      "sampul-beranda": uploadSampulBerandaImage,
+      "sampul-tentang": uploadSampulTentangImage,
+      "balai": uploadBalaiDesaImage,
+    };
+
     for (const [id, file] of Object.entries(pendingFiles)) {
       const formData = new FormData();
       formData.set("file", file);
 
-      if (id === "balai") {
-        const result = await uploadBalaiDesaImage(formData);
+      const coverAction = coverUploadActions[id];
+      if (coverAction) {
+        const result = await coverAction(formData);
         if (result.error) {
+          showToast(result.error, "error");
           setGalleryError(result.error);
           setSavingGallery(false);
           return;
@@ -154,6 +179,7 @@ export default function DesaManagement({
 
       const result = await uploadDesaGalleryImage(urutan, formData);
       if (result.error) {
+        showToast(result.error, "error");
         setGalleryError(result.error);
         setSavingGallery(false);
         return;
@@ -172,6 +198,7 @@ export default function DesaManagement({
         item.description,
       );
       if (result.error) {
+        showToast(result.error, "error");
         setGalleryError(result.error);
         setSavingGallery(false);
         return;
@@ -181,6 +208,7 @@ export default function DesaManagement({
     setSavingGallery(false);
     setPendingFiles({});
     setGallerySuccess("Galeri desa berhasil disimpan.");
+    showToast("Galeri desa berhasil disimpan.", "success");
     router.refresh();
   }
 
@@ -206,19 +234,27 @@ export default function DesaManagement({
     setGalleryError("");
     setGallerySuccess("");
 
-    const result =
-      id === "balai"
-        ? await deleteBalaiDesaImage()
-        : await deleteDesaGalleryImage(galleryUrutan(id)!);
+    const coverDeleteActions: Record<string, () => Promise<{ error: string | null }>> = {
+      "sampul-beranda": deleteSampulBerandaImage,
+      "sampul-tentang": deleteSampulTentangImage,
+      "balai": deleteBalaiDesaImage,
+    };
+
+    const coverDeleteAction = coverDeleteActions[id];
+    const result = coverDeleteAction
+      ? await coverDeleteAction()
+      : await deleteDesaGalleryImage(galleryUrutan(id)!);
 
     setSavingGallery(false);
 
     if (result.error) {
+      showToast(result.error, "error");
       setGalleryError(result.error);
       return;
     }
 
     setGallerySuccess("Gambar berhasil dihapus.");
+    showToast("Gambar berhasil dihapus.", "success");
     router.refresh();
   }
 
@@ -251,26 +287,33 @@ export default function DesaManagement({
             <span className="mb-2 block text-sm font-semibold">Alamat</span>
             <input
               value={draftForm.address}
+              maxLength={FORM_LIMITS.address}
               onChange={(event) => updateForm("address", event.target.value)}
               className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
             />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.address)}</span>
           </label>
           <label>
             <span className="mb-2 block text-sm font-semibold">No Telepon</span>
             <input
               value={draftForm.phone}
+              maxLength={FORM_LIMITS.phone}
+              inputMode="tel"
               onChange={(event) => updateForm("phone", event.target.value)}
               className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
             />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.phone, "Hanya angka, +, spasi, atau tanda -")}</span>
           </label>
           <label>
             <span className="mb-2 block text-sm font-semibold">Email</span>
             <input
               type="email"
               value={draftForm.email}
+              maxLength={FORM_LIMITS.email}
               onChange={(event) => updateForm("email", event.target.value)}
               className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
             />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.email)}</span>
           </label>
           <label className="md:col-span-2">
             <span className="mb-2 block text-sm font-semibold">
@@ -278,12 +321,14 @@ export default function DesaManagement({
             </span>
             <textarea
               value={draftForm.description}
+              maxLength={FORM_LIMITS.villageDescription}
               onChange={(event) =>
                 updateForm("description", event.target.value)
               }
               rows={5}
               className="w-full rounded-xl border border-color4 px-4 py-3 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
             />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.villageDescription)}</span>
           </label>
           <label className="md:col-span-2">
             <span className="mb-2 block text-sm font-semibold">
@@ -292,9 +337,11 @@ export default function DesaManagement({
             <input
               type="url"
               value={draftForm.googleMaps}
+              maxLength={FORM_LIMITS.url}
               onChange={(event) => updateForm("googleMaps", event.target.value)}
               className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
             />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
           </label>
           <label>
             <span className="mb-2 block text-sm font-semibold">
@@ -303,9 +350,11 @@ export default function DesaManagement({
             <input
               type="url"
               value={draftForm.facebook}
+              maxLength={FORM_LIMITS.url}
               onChange={(event) => updateForm("facebook", event.target.value)}
               className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
             />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
           </label>
           <label>
             <span className="mb-2 block text-sm font-semibold">
@@ -314,9 +363,11 @@ export default function DesaManagement({
             <input
               type="url"
               value={draftForm.instagram}
+              maxLength={FORM_LIMITS.url}
               onChange={(event) => updateForm("instagram", event.target.value)}
               className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
             />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
           </label>
           <label>
             <span className="mb-2 block text-sm font-semibold">
@@ -325,9 +376,11 @@ export default function DesaManagement({
             <input
               type="url"
               value={draftForm.tiktok}
+              maxLength={FORM_LIMITS.url}
               onChange={(event) => updateForm("tiktok", event.target.value)}
               className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
             />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
           </label>
           <label>
             <span className="mb-2 block text-sm font-semibold">
@@ -336,7 +389,34 @@ export default function DesaManagement({
             <input
               type="url"
               value={draftForm.youtube}
+              maxLength={FORM_LIMITS.url}
               onChange={(event) => updateForm("youtube", event.target.value)}
+              className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
+            />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
+          </label>
+          <label>
+            <span className="mb-2 block text-sm font-semibold">Username Admin</span>
+            <input
+              type="text"
+              value={draftForm.username}
+              maxLength={FORM_LIMITS.username}
+              onChange={(event) => updateForm("username", event.target.value)}
+              className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
+            />
+            <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.username)}</span>
+          </label>
+          <label>
+            <span className="mb-2 block text-sm font-semibold">Password Admin</span>
+            <span className="mb-2 block text-xs text-color5/55">
+              Kosongkan jika tidak ingin mengubah password. Maksimal {FORM_LIMITS.password} karakter.
+            </span>
+            <input
+              type="password"
+              value={draftForm.password ?? ""}
+              maxLength={FORM_LIMITS.password}
+              onChange={(event) => updateForm("password", event.target.value)}
+              placeholder="••••••••"
               className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
             />
           </label>
@@ -435,13 +515,14 @@ export default function DesaManagement({
                   Hapus Gambar
                 </button>
               )}
-              {item.id !== "balai" && (
+              {!COVER_IDS.has(item.id) && (
                 <label className="mt-3 block">
                   <span className="mb-1.5 block text-sm font-semibold">
                     Deskripsi Gambar
                   </span>
                   <input
                     value={item.description}
+                    maxLength={FORM_LIMITS.imageDescription}
                     onChange={(event) =>
                       updateGallery(item.id, {
                         description: event.target.value,
@@ -450,6 +531,7 @@ export default function DesaManagement({
                     placeholder={`Deskripsi ${item.label.toLowerCase()}`}
                     className="h-10 w-full rounded-lg border border-color4 px-3 text-sm outline-none focus:border-color1"
                   />
+                  <span className="mt-1 block text-xs text-color5/55">{characterHint(FORM_LIMITS.imageDescription)}</span>
                 </label>
               )}
             </article>

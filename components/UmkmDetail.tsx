@@ -13,8 +13,8 @@ import {
   Phone,
   Star,
   UtensilsCrossed,
-  X,
 } from "lucide-react";
+import ImageLightbox from "@/components/ImageLightbox";
 
 const PRODUCTS_PER_PAGE = 12;
 
@@ -102,13 +102,13 @@ export default function UmkmDetail({
 
         <div className="mt-8 border-t border-color4/75 pt-10 lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-14">
           <aside className="border-b border-color4/75 pb-9 lg:border-b-0 lg:border-r lg:pr-12 lg:pb-0">
-            <div className="mx-auto h-40 w-40 rounded-full border-4 border-color4 shadow-sm overflow-hidden relative">
+            <button type="button" disabled={!logoUrl} onClick={() => logoUrl && setSelectedImage(logoUrl)} className="relative mx-auto block h-40 w-40 overflow-hidden rounded-full border-4 border-color4 shadow-sm disabled:cursor-default">
               {logoUrl ? (
                 <Image src={logoUrl} alt={`${name} logo`} fill sizes="160px" className="object-cover" unoptimized />
               ) : (
                 <Placeholder label="Logo UMKM" className="h-full w-full" />
               )}
-            </div>
+            </button>
 
             <div className="mt-6 text-center">
               <h2 className="text-3xl font-bold">{name}</h2>
@@ -285,28 +285,7 @@ export default function UmkmDetail({
         </section>
       </div>
 
-      {selectedImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <button
-            type="button"
-            onClick={() => setSelectedImage(null)}
-            className="absolute right-4 top-4 rounded-full bg-color3 p-3 text-color5 shadow-lg"
-            aria-label="Tutup galeri"
-          >
-            <X size={20} />
-          </button>
-          <div className="relative max-h-[90vh] max-w-[90vw] w-full rounded-3xl overflow-hidden border border-color4 bg-color3 shadow-2xl">
-            <Image
-              src={selectedImage}
-              alt="Gambar UMKM"
-              width={1200}
-              height={900}
-              className="h-auto w-full object-contain bg-black"
-              unoptimized
-            />
-          </div>
-        </div>
-      )}
+      <ImageLightbox src={selectedImage} alt="Gambar UMKM" onClose={() => setSelectedImage(null)} />
     </main>
   );
 }

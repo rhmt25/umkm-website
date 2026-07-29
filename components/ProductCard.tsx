@@ -10,6 +10,8 @@ export interface ProductCardProps {
 }
 
 export default function ProductCard({ name, description, umkmName, href, price }: ProductCardProps) {
+  const formattedPrice = price ? price.replace(/^Rp\.?\s*/i, "") : "";
+
   const card = (
     <article className="overflow-hidden rounded-2xl border border-color4/75 bg-color3 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-full hover:border-color1/50">
       <div className="p-5 flex flex-col flex-grow">
@@ -22,7 +24,7 @@ export default function ProductCard({ name, description, umkmName, href, price }
         <p className="mt-2 text-sm leading-6 text-color5/65 flex-grow min-h-12">
           {description}
         </p>
-        <p className="mt-4 text-lg font-bold text-color1">Rp. {price}</p>
+        {price && <p className="mt-4 text-lg font-bold text-color1">Rp. {formattedPrice}</p>}
       </div>
     </article>
   );

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { FORM_LIMITS } from "@/lib/form-limits";
 
 type LoginState = { error?: string };
 
@@ -49,6 +50,9 @@ export async function login(
 
   if (!identity || !password) {
     return { error: "Nomor HP atau username dan password wajib diisi." };
+  }
+  if (identity.length > FORM_LIMITS.username || password.length > FORM_LIMITS.password) {
+    return { error: "Data masuk melebihi batas karakter yang diizinkan." };
   }
 
   const supabase = await createClient();

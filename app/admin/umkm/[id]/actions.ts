@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { firstLimitError, FORM_LIMITS } from "@/lib/form-limits";
 
 type ActionResult = { error: string | null };
 
@@ -101,10 +102,17 @@ export async function updateUmkmProfile(
     if (!nama || !pemilik || !noWa) {
       return { error: "Nama UMKM, pemilik, dan nomor WhatsApp wajib diisi." };
     }
+    if ((data.rt && !/^\d+$/.test(data.rt)) || (data.rw && !/^\d+$/.test(data.rw)) || !/^[+\d\s()-]+$/.test(noWa)) {
+      return { error: "RT dan RW harus berupa angka. Nomor WhatsApp hanya boleh berisi angka atau tanda telepon." };
+    }
 
     if (password && password.length < 6) {
       return { error: "Password minimal 6 karakter." };
     }
+    const limitError = firstLimitError([
+      { label: "Nama UMKM", value: nama, max: FORM_LIMITS.umkmName }, { label: "Nama pemilik", value: pemilik, max: FORM_LIMITS.personName }, { label: "RT", value: data.rt, max: FORM_LIMITS.rtRw }, { label: "RW", value: data.rw, max: FORM_LIMITS.rtRw }, { label: "Dukuh", value: data.dukuh, max: FORM_LIMITS.villageName }, { label: "Dusun", value: data.dusun, max: FORM_LIMITS.villageName }, { label: "Alamat lengkap", value: data.alamat_lengkap, max: FORM_LIMITS.address }, { label: "Nomor WhatsApp", value: noWa, max: FORM_LIMITS.phone }, { label: "Instagram", value: data.instagram, max: FORM_LIMITS.socialHandle }, { label: "TikTok", value: data.tiktok, max: FORM_LIMITS.socialHandle }, { label: "Facebook", value: data.facebook, max: FORM_LIMITS.socialHandle }, { label: "Shopee", value: data.shopee, max: FORM_LIMITS.url }, { label: "Tokopedia", value: data.tokopedia, max: FORM_LIMITS.url }, { label: "Google Maps", value: data.google_maps, max: FORM_LIMITS.url }, { label: "Keunggulan produk", value: data.keunggulan1, max: FORM_LIMITS.advantage }, { label: "Keunggulan produk", value: data.keunggulan2, max: FORM_LIMITS.advantage }, { label: "Keunggulan produk", value: data.keunggulan3, max: FORM_LIMITS.advantage }, { label: "Keunggulan produk", value: data.keunggulan4, max: FORM_LIMITS.advantage }, { label: "Password", value: password, max: FORM_LIMITS.password },
+    ]);
+    if (limitError) return { error: limitError };
 
     const payload = {
       nama,
@@ -171,6 +179,8 @@ export async function createProduct(
     const harga = Number(input.price.replace(/\D/g, "") || "0");
 
     if (!nama) return { error: "Nama produk wajib diisi." };
+    const limitError = firstLimitError([{ label: "Nama produk", value: nama, max: FORM_LIMITS.productName }, { label: "Deskripsi produk", value: input.description, max: FORM_LIMITS.productDescription }]);
+    if (limitError) return { error: limitError };
     if (Number.isNaN(harga) || harga < 0) {
       return { error: "Harga produk tidak valid." };
     }
@@ -209,6 +219,8 @@ export async function updateProduct(
     const harga = Number(input.price.replace(/\D/g, "") || "0");
 
     if (!nama) return { error: "Nama produk wajib diisi." };
+    const limitError = firstLimitError([{ label: "Nama produk", value: nama, max: FORM_LIMITS.productName }, { label: "Deskripsi produk", value: input.description, max: FORM_LIMITS.productDescription }]);
+    if (limitError) return { error: limitError };
     if (Number.isNaN(harga) || harga < 0) {
       return { error: "Harga produk tidak valid." };
     }

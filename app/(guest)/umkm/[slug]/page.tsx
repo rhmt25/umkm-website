@@ -2,14 +2,15 @@ import UmkmDetail from "@/components/UmkmDetail";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 
-export default async function Page({ params }: { params: { slug: string } }) {
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const supabase = await createClient();
   const { data: umkm, error: umkmError } = await supabase
     .from("umkm")
     .select(
       "id,slug,nama,pemilik,rt,rw,dukuh,dusun,alamat_lengkap,no_wa,instagram,tiktok,facebook,shopee,tokopedia,google_maps,keunggulan1,keunggulan2,keunggulan3,keunggulan4",
     )
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .maybeSingle();
 
   if (umkmError || !umkm) {

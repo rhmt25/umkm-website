@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { firstLimitError, FORM_LIMITS } from "@/lib/form-limits";
 
 type ActionResult = { error: string | null };
 
@@ -54,6 +55,124 @@ async function removeStoragePath(path: string | null | undefined) {
 function revalidateDesa() {
   revalidatePath("/admin/desa");
   revalidatePath("/tentang-desa");
+  revalidatePath("/");
+}
+
+type CoverSlot = "sampul_beranda_path" | "sampul_tentang_path";
+
+async function uploadCoverImage(
+  column: CoverSlot,
+  prefix: string,
+  label: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    const supabase = await requireAdmin();
+    const file = formData.get("file");
+    if (!validateImage(file)) {
+      return {
+        error: "Gambar harus berformat JPEG/JPG/PNG dan maksimal 2 MB.",
+      };
+    }
+
+    const { data: desa } = await supabase
+      .from("desa")
+      .select(column)
+      .eq("id", DESA_ID)
+      .single();
+
+    const ext = extFromMime(file.type);
+    const storagePath = `desa/${prefix}-${crypto.randomUUID()}.${ext}`;
+    const admin = createAdminClient();
+
+    const { error: uploadError } = await admin.storage
+      .from("umkm-media")
+      .upload(storagePath, file, { contentType: file.type, upsert: false });
+
+    if (uploadError) return { error: `Gambar ${label} gagal diunggah.` };
+
+    const { error: dbError } = await supabase
+      .from("desa")
+      .update({ [column]: storagePath })
+      .eq("id", DESA_ID);
+
+    if (dbError) {
+      await admin.storage.from("umkm-media").remove([storagePath]);
+      return { error: `Referensi gambar ${label} gagal disimpan.` };
+    }
+
+    const oldPath = (desa as Record<string, string | null> | null)?.[column];
+    if (oldPath && oldPath !== storagePath) {
+      await removeStoragePath(oldPath);
+    }
+
+    revalidateDesa();
+    return { error: null };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : `Gambar ${label} gagal diunggah.`,
+    };
+  }
+}
+
+async function deleteCoverImage(
+  column: CoverSlot,
+  label: string,
+): Promise<ActionResult> {
+  try {
+    const supabase = await requireAdmin();
+
+    const { data: desa } = await supabase
+      .from("desa")
+      .select(column)
+      .eq("id", DESA_ID)
+      .single();
+
+    const oldPath = (desa as Record<string, string | null> | null)?.[column];
+    if (!oldPath) return { error: null };
+
+    const { error } = await supabase
+      .from("desa")
+      .update({ [column]: null })
+      .eq("id", DESA_ID);
+
+    if (error) return { error: `Gambar ${label} gagal dihapus.` };
+
+    await removeStoragePath(oldPath);
+
+    revalidateDesa();
+    return { error: null };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : `Gambar ${label} gagal dihapus.`,
+    };
+  }
+}
+
+export async function uploadSampulBerandaImage(
+  formData: FormData,
+): Promise<ActionResult> {
+  return uploadCoverImage("sampul_beranda_path", "sampul-beranda", "sampul beranda", formData);
+}
+
+export async function deleteSampulBerandaImage(): Promise<ActionResult> {
+  return deleteCoverImage("sampul_beranda_path", "sampul beranda");
+}
+
+export async function uploadSampulTentangImage(
+  formData: FormData,
+): Promise<ActionResult> {
+  return uploadCoverImage("sampul_tentang_path", "sampul-tentang", "sampul tentang desa", formData);
+}
+
+export async function deleteSampulTentangImage(): Promise<ActionResult> {
+  return deleteCoverImage("sampul_tentang_path", "sampul tentang desa");
 }
 
 export async function updateDesaProfile(data: {
@@ -66,9 +185,29 @@ export async function updateDesaProfile(data: {
   instagram: string;
   tiktok: string;
   youtube: string;
+  username?: string;
+  password?: string;
 }): Promise<ActionResult> {
   try {
     const supabase = await requireAdmin();
+
+    const username = data.username?.trim();
+    const password = data.password?.trim();
+
+    if (username !== undefined && !username) {
+      return { error: "Username admin wajib diisi." };
+    }
+    if (data.phone && !/^[+\d\s()-]+$/.test(data.phone)) {
+      return { error: "No telepon hanya boleh berisi angka atau tanda telepon." };
+    }
+
+    if (password && password.length < 6) {
+      return { error: "Password minimal 6 karakter." };
+    }
+    const limitError = firstLimitError([
+      { label: "Alamat", value: data.address, max: FORM_LIMITS.address }, { label: "No telepon", value: data.phone, max: FORM_LIMITS.phone }, { label: "Email", value: data.email, max: FORM_LIMITS.email }, { label: "Tentang desa", value: data.description, max: FORM_LIMITS.villageDescription }, { label: "Link Google Maps", value: data.googleMaps, max: FORM_LIMITS.url }, { label: "Link Facebook", value: data.facebook, max: FORM_LIMITS.url }, { label: "Link Instagram", value: data.instagram, max: FORM_LIMITS.url }, { label: "Link TikTok", value: data.tiktok, max: FORM_LIMITS.url }, { label: "Link YouTube", value: data.youtube, max: FORM_LIMITS.url }, { label: "Username admin", value: username, max: FORM_LIMITS.username }, { label: "Password", value: password, max: FORM_LIMITS.password },
+    ]);
+    if (limitError) return { error: limitError };
 
     const { error } = await supabase
       .from("desa")
@@ -86,6 +225,42 @@ export async function updateDesaProfile(data: {
       .eq("id", DESA_ID);
 
     if (error) return { error: "Data desa gagal disimpan." };
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const admin = createAdminClient();
+
+      if (username) {
+        const { data: existing } = await admin
+          .from("profiles")
+          .select("id")
+          .ilike("username", username)
+          .neq("id", user.id)
+          .maybeSingle();
+
+        if (existing) {
+          return { error: "Username sudah digunakan oleh akun lain." };
+        }
+
+        const { error: profileError } = await admin
+          .from("profiles")
+          .update({ username })
+          .eq("id", user.id);
+
+        if (profileError) return { error: "Username admin gagal diperbarui." };
+      }
+
+      if (password) {
+        const { error: passwordError } = await admin.auth.admin.updateUserById(
+          user.id,
+          { password },
+        );
+        if (passwordError) return { error: "Password admin gagal diperbarui." };
+      }
+    }
 
     revalidateDesa();
     return { error: null };
@@ -253,6 +428,8 @@ export async function updateDesaGalleryDescription(
     if (urutan < 1 || urutan > 6) {
       return { error: "Urutan galeri tidak valid." };
     }
+    const limitError = firstLimitError([{ label: "Deskripsi gambar", value: description, max: FORM_LIMITS.imageDescription }]);
+    if (limitError) return { error: limitError };
 
     const supabase = await requireAdmin();
 

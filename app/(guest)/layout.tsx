@@ -1,6 +1,6 @@
 import { TreePine, MapPin, Phone, Mail, LogIn } from "lucide-react";
 import Link from "next/link";
-import { FaYoutube as Youtube, FaFacebook as Facebook, FaInstagram as Instagram } from "react-icons/fa6";
+import { FaYoutube as Youtube, FaFacebook as Facebook, FaInstagram as Instagram, FaTiktok as Tiktok } from "react-icons/fa6";
 import { createClient } from "@/lib/supabase/server";
 
 const navLinks = [
@@ -21,18 +21,23 @@ export default async function GuestLayout({ children }: { children: React.ReactN
   const supabase = await createClient();
   const { data: desa } = await supabase
     .from("desa")
-    .select("alamat,no_telepon,email,facebook,instagram,youtube")
+    .select("alamat,no_telepon,email,facebook,instagram,tiktok,youtube")
     .eq("id", 1)
     .maybeSingle();
 
-  const address = desa?.alamat ?? "Desa Masaran, Kecamatan Bawang, Kabupaten Banjarnegara, Jawa Tengah, 53471";
-  const contactPhone = desa?.no_telepon ?? "082324666582";
-  const contactEmail = desa?.email ?? "desa.masaran@gmail.com";
-  const socialLinks = [
-    { Icon: Facebook, href: desa?.facebook ?? "https://facebook.com", label: "Facebook" },
-    { Icon: Instagram, href: desa?.instagram ?? "https://www.instagram.com/desamasaran/", label: "Instagram" },
-    { Icon: Youtube, href: desa?.youtube ?? "https://youtube.com", label: "YouTube" },
+  const address = desa?.alamat?.trim();
+  const contactPhone = desa?.no_telepon?.trim();
+  const contactEmail = desa?.email?.trim();
+
+  const rawSocialLinks = [
+    { Icon: Facebook, href: desa?.facebook?.trim(), label: "Facebook" },
+    { Icon: Instagram, href: desa?.instagram?.trim(), label: "Instagram" },
+    { Icon: Tiktok, href: desa?.tiktok?.trim(), label: "TikTok" },
+    { Icon: Youtube, href: desa?.youtube?.trim(), label: "YouTube" },
   ];
+
+  const socialLinks = rawSocialLinks.filter((item): item is { Icon: any; href: string; label: string } => Boolean(item.href));
+  const hasContacts = Boolean(address || contactPhone || contactEmail);
 
   return (
     <div className="bg-color3 text-color5 min-h-screen">
@@ -48,7 +53,7 @@ export default async function GuestLayout({ children }: { children: React.ReactN
             </span>
           </Link>
 
-          <nav className="hidden lg:flex items-center  gap-10">
+          <nav className="hidden lg:flex items-center gap-10">
             {navLinks.map((link) => (
               <Link
                 key={link.label}
@@ -58,7 +63,6 @@ export default async function GuestLayout({ children }: { children: React.ReactN
                 {link.label}
               </Link>
             ))}
-
           </nav>
           <Link href="/masuk" className="inline-flex items-center gap-2 rounded-lg bg-color1 px-6 py-3 text-sm font-semibold text-color3 hover:opacity-90 transition-opacity">
             Masuk
@@ -83,20 +87,22 @@ export default async function GuestLayout({ children }: { children: React.ReactN
               Website katalog UMKM Desa Masaran. Dukung dan bangga produk lokal desa kita.
             </p>
 
-            <div className="mt-5 flex items-center gap-3">
-              {socialLinks.map(({ Icon, href, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-color3/10 hover:bg-color3/20 transition-colors text-color3"
-                >
-                  <Icon size={16} />
-                </a>
-              ))}
-            </div>
+            {socialLinks.length > 0 && (
+              <div className="mt-5 flex items-center gap-3">
+                {socialLinks.map(({ Icon, href, label }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-color3/10 hover:bg-color3/20 transition-colors text-color3"
+                  >
+                    <Icon size={16} />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -112,23 +118,31 @@ export default async function GuestLayout({ children }: { children: React.ReactN
             </ul>
           </div>
 
-          <div>
-            <p className="text-xs font-semibold tracking-wide text-color4 uppercase mb-4">Kontak</p>
-            <div className="space-y-2.5 text-sm text-color3/70">
-              <p className="flex items-start gap-2">
-                <MapPin size={14} className="mt-0.5 shrink-0" />
-                {address}
-              </p>
-              <p className="flex items-center gap-2">
-                <Phone size={14} className="shrink-0" />
-                {contactPhone}
-              </p>
-              <p className="flex items-center gap-2">
-                <Mail size={14} className="shrink-0" />
-                {contactEmail}
-              </p>
+          {hasContacts && (
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-color4 uppercase mb-4">Kontak</p>
+              <div className="space-y-2.5 text-sm text-color3/70">
+                {address && (
+                  <p className="flex items-start gap-2">
+                    <MapPin size={14} className="mt-0.5 shrink-0" />
+                    {address}
+                  </p>
+                )}
+                {contactPhone && (
+                  <p className="flex items-center gap-2">
+                    <Phone size={14} className="shrink-0" />
+                    {contactPhone}
+                  </p>
+                )}
+                {contactEmail && (
+                  <p className="flex items-center gap-2">
+                    <Mail size={14} className="shrink-0" />
+                    {contactEmail}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="border-t border-color3/15">

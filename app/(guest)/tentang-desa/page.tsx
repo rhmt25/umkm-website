@@ -14,6 +14,7 @@ import {
   Tag,
 } from "lucide-react";
 import CultureIcon from "@/components/CultureIcon";
+import DesaGallery from "@/components/DesaGallery";
 import { createClient } from "@/lib/supabase/server";
 
 function ImagePlaceholder({ label, className = "" }: { label: string; className?: string }) {
@@ -42,6 +43,7 @@ type DesaData = {
   tiktok?: string | null;
   youtube?: string | null;
   balai_desa_path?: string | null;
+  sampul_tentang_path?: string | null;
 };
 
 type DesaImage = {
@@ -65,7 +67,7 @@ export default async function Page() {
   const [desaResult, galleryResult] = await Promise.all([
     supabase
       .from("desa")
-      .select("alamat,no_telepon,email,tentang,google_maps,facebook,instagram,tiktok,youtube,balai_desa_path")
+      .select("alamat,no_telepon,email,tentang,google_maps,facebook,instagram,tiktok,youtube,balai_desa_path,sampul_tentang_path")
       .eq("id", 1)
       .maybeSingle(),
     supabase
@@ -76,8 +78,8 @@ export default async function Page() {
   ]);
 
   const desa = desaResult.data as DesaData | null;
-  const heroImageUrl = desa?.balai_desa_path
-    ? supabase.storage.from("umkm-media").getPublicUrl(desa.balai_desa_path).data.publicUrl
+  const heroImageUrl = desa?.sampul_tentang_path
+    ? supabase.storage.from("umkm-media").getPublicUrl(desa.sampul_tentang_path).data.publicUrl
     : "";
 
   const galleryImages = defaultGalleryLabels.map((label, index) => {
@@ -130,20 +132,7 @@ export default async function Page() {
       </section>
 
       <div className="mx-auto max-w-7xl px-5 py-12 sm:px-6 lg:px-8 lg:py-16">
-        <section className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
-          {heroImageUrl ? (
-            <div className="relative h-72 rounded-2xl border border-color4/70 shadow-sm overflow-hidden sm:h-96">
-              <Image src={heroImageUrl} alt="Kantor Desa Masaran" fill className="object-cover" unoptimized />
-            </div>
-          ) : (
-            <ImagePlaceholder label="Placeholder Foto Kantor Desa" className="h-72 rounded-2xl border border-color4/70 shadow-sm sm:h-96" />
-          )}
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wide text-color1">Profil Desa</p>
-            <h2 className="mt-2 text-3xl font-bold">Tentang Desa Masaran</h2>
-            <p className="mt-5 leading-7 text-color5/75 text-justify">{description}</p>
-          </div>
-        </section>
+        <DesaGallery galleryImages={galleryImages} heroImageUrl={heroImageUrl} description={description} />
 
         <section className="mt-12">
           <h2 className="text-center text-2xl font-bold text-color1">Potensi Desa Masaran</h2>
@@ -156,38 +145,30 @@ export default async function Page() {
         <section id="lokasi" className="mt-12">
           <h2 className="text-center text-2xl font-bold text-color1">Lokasi Desa Masaran</h2>
           <div className="mt-5 grid items-center">
-            {mapsUrl ? (
-              <div className="overflow-hidden rounded-2xl border border-color4/70 shadow-sm">
-                <iframe
-                  src={mapsUrl}
-                  title="Peta Desa Masaran"
-                  className="h-64 w-full min-h-[16rem]"
-                  loading="lazy"
-                />
-              </div>
-            ) : (
-              <ImagePlaceholder label="Placeholder Peta Desa Masaran" className="h-64 rounded-2xl border border-color4/70" />
-            )}
+            <div className="overflow-hidden rounded-2xl border border-color4/70 shadow-sm">
+              <iframe
+                src={mapsUrl || "https://maps.google.com/maps?q=Desa+Masaran+Kecamatan+Bawang+Kabupaten+Banjarnegara+Jawa+Tengah&output=embed"}
+                title="Peta Desa Masaran"
+                className="h-80 w-full"
+                loading="lazy"
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+            <div className="mt-3 flex justify-center">
+              <a
+                href={`https://www.google.com/maps/search/Desa+Masaran+Kecamatan+Bawang+Kabupaten+Banjarnegara+Jawa+Tengah`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg bg-color1 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                <MapPin size={16} />
+                Buka di Google Maps
+              </a>
+            </div>
           </div>
         </section>
 
-        <section className="mt-12 rounded-2xl bg-color4/35 p-6 sm:p-8">
-          <h2 className="text-center text-2xl font-bold text-color1">Galeri Desa Masaran</h2>
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {galleryImages.map((image) => (
-              <figure key={image.id} className="overflow-hidden rounded-2xl border border-color4/75">
-                {image.url ? (
-                  <div className="relative h-28 w-full">
-                    <Image src={image.url} alt={image.label} fill className="object-cover" unoptimized />
-                  </div>
-                ) : (
-                  <ImagePlaceholder label="Foto" className="h-28 rounded-xl" />
-                )}
-                <figcaption className="mt-2 text-center text-xs font-semibold text-color5/80 px-2 pb-2">{image.label}</figcaption>
-              </figure>
-            ))}
-          </div>
-        </section>
 
         <section className="mt-12 flex flex-col items-center justify-between gap-6 rounded-2xl bg-color1 px-8 py-9 text-center text-color3 sm:flex-row sm:text-left">
           <div><h2 className="text-2xl font-bold">Mari Dukung UMKM Desa Masaran</h2><p className="mt-2 text-color3/80">Temukan berbagai pelaku usaha lokal<br className="hidden sm:block" /> dan dukung produk terbaik dari Desa Masaran.</p></div>

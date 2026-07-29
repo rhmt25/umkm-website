@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { FORM_LIMITS } from "@/lib/form-limits";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -20,6 +21,7 @@ async function requireAdmin() {
 export async function saveCategory(input: { id?: number; name: string }) {
   const name = input.name.trim();
   if (!name) return { error: "Nama kategori wajib diisi." };
+  if (name.length > FORM_LIMITS.categoryName) return { error: `Nama kategori maksimal ${FORM_LIMITS.categoryName} karakter.` };
 
   const supabase = await requireAdmin();
   const query = input.id

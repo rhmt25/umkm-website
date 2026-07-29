@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { FiSearch, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import Select from "react-select";
 import ProductCard from "@/components/ProductCard";
+import { FORM_LIMITS } from "@/lib/form-limits";
 
 export interface GuestProductItem {
   id: number;
@@ -21,6 +23,26 @@ interface GuestProductDirectoryProps {
   dusuns: string[];
 }
 
+type SelectOption = { value: string; label: string };
+
+const selectStyles = {
+  control: (base: any) => ({
+    ...base,
+    height: 48,
+    minHeight: 48,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    boxShadow: "none",
+    ":hover": { borderColor: "#2d5d20" },
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: state.isFocused ? "#f2eac7" : "white",
+    color: "#412712",
+  }),
+  menu: (base: any) => ({ ...base, zIndex: 20 }),
+};
+
 const PER_PAGE = 12;
 
 export default function GuestProductDirectory({ initialProducts, categories, dusuns }: GuestProductDirectoryProps) {
@@ -28,6 +50,16 @@ export default function GuestProductDirectory({ initialProducts, categories, dus
   const [kategori, setKategori] = useState("Semua");
   const [dusun, setDusun] = useState("Semua");
   const [page, setPage] = useState(1);
+
+  const categoryOptions: SelectOption[] = useMemo(
+    () => [{ value: "Semua", label: "Semua Kategori" }, ...categories.map((c) => ({ value: c, label: c }))],
+    [categories]
+  );
+
+  const dusunOptions: SelectOption[] = useMemo(
+    () => [{ value: "Semua", label: "Semua Dusun" }, ...dusuns.map((d) => ({ value: d, label: d }))],
+    [dusuns]
+  );
 
   const filtered = useMemo(() => {
     return initialProducts.filter((item) => {
@@ -54,9 +86,10 @@ export default function GuestProductDirectory({ initialProducts, categories, dus
         <div className="bg-white rounded-xl shadow-sm p-5 mt-8">
           <div className="grid lg:grid-cols-12 gap-4">
             <div className="lg:col-span-5 relative">
-              <FiSearch className="absolute left-4 top-4 text-gray-400" />
+              <FiSearch className="absolute left-4 top-4 text-gray-400 z-10" />
               <input
                 value={search}
+                maxLength={FORM_LIMITS.search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setPage(1);
@@ -66,31 +99,33 @@ export default function GuestProductDirectory({ initialProducts, categories, dus
               />
             </div>
 
-            <select
-              value={kategori}
-              onChange={(e) => {
-                setKategori(e.target.value);
-                setPage(1);
-              }}
-              className="lg:col-span-3 h-12 border rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-color1 bg-white"
-            >
-              {["Semua", ...categories].map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
+            <div className="lg:col-span-3">
+              <Select<SelectOption>
+                instanceId="produk-kategori-select"
+                value={categoryOptions.find((o) => o.value === kategori)}
+                onChange={(option) => {
+                  setKategori(option?.value ?? "Semua");
+                  setPage(1);
+                }}
+                options={categoryOptions}
+                placeholder="Pilih Kategori..."
+                styles={selectStyles}
+              />
+            </div>
 
-            <select
-              value={dusun}
-              onChange={(e) => {
-                setDusun(e.target.value);
-                setPage(1);
-              }}
-              className="lg:col-span-3 h-12 border rounded-lg px-4 focus:outline-none focus:ring-2 focus:ring-color1 bg-white"
-            >
-              {["Semua", ...dusuns].map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
+            <div className="lg:col-span-3">
+              <Select<SelectOption>
+                instanceId="produk-dusun-select"
+                value={dusunOptions.find((o) => o.value === dusun)}
+                onChange={(option) => {
+                  setDusun(option?.value ?? "Semua");
+                  setPage(1);
+                }}
+                options={dusunOptions}
+                placeholder="Pilih Dusun..."
+                styles={selectStyles}
+              />
+            </div>
 
             <button className="lg:col-span-1 h-12 rounded-lg bg-color1 hover:opacity-90 text-white font-semibold transition-opacity">
               Cari

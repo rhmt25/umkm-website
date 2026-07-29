@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import UmkmCard from "@/components/UmkmCard";
 import { createClient } from "@/lib/supabase/client";
+import { FORM_LIMITS } from "@/lib/form-limits";
 
 type UmkmItem = { id: number; name: string; owner: string; category: string; village: string; image?: string };
 
@@ -87,6 +88,7 @@ export default function AdminUmkmList() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-color5/45" size={19} />
         <input
           value={search}
+          maxLength={FORM_LIMITS.search}
           onChange={(event) => {
             setSearch(event.target.value);
             setPage(1);
@@ -104,6 +106,7 @@ export default function AdminUmkmList() {
             owner={item.owner}
             category={item.category}
             location={`Dusun ${item.village}`}
+            image={item.image}
             href={`/admin/umkm/${item.id}`}
           />
         ))}
