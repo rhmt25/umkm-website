@@ -15,6 +15,7 @@ import {
 import UmkmCard from "@/components/UmkmCard";
 import { createClient } from "@/lib/supabase/server";
 
+
 function ImagePlaceholder({
   className = "",
   label = "Placeholder Gambar",
