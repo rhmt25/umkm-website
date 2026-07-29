@@ -130,21 +130,28 @@ export default function DesaManagement({
     setFormError("");
     setFormSuccess("");
 
-    const result = await updateDesaProfile(draftForm);
-    setSavingForm(false);
+    try {
+      const result = await updateDesaProfile(draftForm);
+      setSavingForm(false);
 
-    if (result.error) {
-      showToast(result.error, "error");
-      setFormError(result.error);
-      return;
+      if (result.error) {
+        showToast(result.error, "error");
+        setFormError(result.error);
+        return;
+      }
+
+      const nextSavedForm = { ...draftForm, password: "" };
+      setSavedForm(nextSavedForm);
+      setDraftForm(nextSavedForm);
+      setFormSuccess("Data desa berhasil disimpan.");
+      showToast("Data desa berhasil disimpan.", "success");
+      router.refresh();
+    } catch (err) {
+      setSavingForm(false);
+      showToast("Gagal menyimpan data desa karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setFormError("Terjadi kesalahan sistem saat menyimpan data desa.");
+      console.error("saveForm error:", err);
     }
-
-    const nextSavedForm = { ...draftForm, password: "" };
-    setSavedForm(nextSavedForm);
-    setDraftForm(nextSavedForm);
-    setFormSuccess("Data desa berhasil disimpan.");
-    showToast("Data desa berhasil disimpan.", "success");
-    router.refresh();
   }
 
   async function saveGallery() {
@@ -152,64 +159,71 @@ export default function DesaManagement({
     setGalleryError("");
     setGallerySuccess("");
 
-    const coverUploadActions: Record<string, (fd: FormData) => Promise<{ error: string | null }>> = {
-      "sampul-beranda": uploadSampulBerandaImage,
-      "sampul-tentang": uploadSampulTentangImage,
-      "balai": uploadBalaiDesaImage,
-    };
+    try {
+      const coverUploadActions: Record<string, (fd: FormData) => Promise<{ error: string | null }>> = {
+        "sampul-beranda": uploadSampulBerandaImage,
+        "sampul-tentang": uploadSampulTentangImage,
+        "balai": uploadBalaiDesaImage,
+      };
 
-    for (const [id, file] of Object.entries(pendingFiles)) {
-      const formData = new FormData();
-      formData.set("file", file);
+      for (const [id, file] of Object.entries(pendingFiles)) {
+        const formData = new FormData();
+        formData.set("file", file);
 
-      const coverAction = coverUploadActions[id];
-      if (coverAction) {
-        const result = await coverAction(formData);
+        const coverAction = coverUploadActions[id];
+        if (coverAction) {
+          const result = await coverAction(formData);
+          if (result.error) {
+            showToast(result.error, "error");
+            setGalleryError(result.error);
+            setSavingGallery(false);
+            return;
+          }
+          continue;
+        }
+
+        const urutan = galleryUrutan(id);
+        if (!urutan) continue;
+
+        const result = await uploadDesaGalleryImage(urutan, formData);
         if (result.error) {
           showToast(result.error, "error");
           setGalleryError(result.error);
           setSavingGallery(false);
           return;
         }
-        continue;
       }
 
-      const urutan = galleryUrutan(id);
-      if (!urutan) continue;
+      for (const item of draftGallery) {
+        const urutan = galleryUrutan(item.id);
+        if (!urutan) continue;
 
-      const result = await uploadDesaGalleryImage(urutan, formData);
-      if (result.error) {
-        showToast(result.error, "error");
-        setGalleryError(result.error);
-        setSavingGallery(false);
-        return;
+        const saved = savedGallery.find((entry) => entry.id === item.id);
+        if (!saved || saved.description === item.description) continue;
+
+        const result = await updateDesaGalleryDescription(
+          urutan,
+          item.description,
+        );
+        if (result.error) {
+          showToast(result.error, "error");
+          setGalleryError(result.error);
+          setSavingGallery(false);
+          return;
+        }
       }
+
+      setSavingGallery(false);
+      setPendingFiles({});
+      setGallerySuccess("Galeri desa berhasil disimpan.");
+      showToast("Galeri desa berhasil disimpan.", "success");
+      router.refresh();
+    } catch (err) {
+      setSavingGallery(false);
+      showToast("Gagal menyimpan galeri desa karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setGalleryError("Terjadi kesalahan sistem saat menyimpan galeri desa.");
+      console.error("saveGallery error:", err);
     }
-
-    for (const item of draftGallery) {
-      const urutan = galleryUrutan(item.id);
-      if (!urutan) continue;
-
-      const saved = savedGallery.find((entry) => entry.id === item.id);
-      if (!saved || saved.description === item.description) continue;
-
-      const result = await updateDesaGalleryDescription(
-        urutan,
-        item.description,
-      );
-      if (result.error) {
-        showToast(result.error, "error");
-        setGalleryError(result.error);
-        setSavingGallery(false);
-        return;
-      }
-    }
-
-    setSavingGallery(false);
-    setPendingFiles({});
-    setGallerySuccess("Galeri desa berhasil disimpan.");
-    showToast("Galeri desa berhasil disimpan.", "success");
-    router.refresh();
   }
 
   function cancelGallery() {
@@ -234,28 +248,35 @@ export default function DesaManagement({
     setGalleryError("");
     setGallerySuccess("");
 
-    const coverDeleteActions: Record<string, () => Promise<{ error: string | null }>> = {
-      "sampul-beranda": deleteSampulBerandaImage,
-      "sampul-tentang": deleteSampulTentangImage,
-      "balai": deleteBalaiDesaImage,
-    };
+    try {
+      const coverDeleteActions: Record<string, () => Promise<{ error: string | null }>> = {
+        "sampul-beranda": deleteSampulBerandaImage,
+        "sampul-tentang": deleteSampulTentangImage,
+        "balai": deleteBalaiDesaImage,
+      };
 
-    const coverDeleteAction = coverDeleteActions[id];
-    const result = coverDeleteAction
-      ? await coverDeleteAction()
-      : await deleteDesaGalleryImage(galleryUrutan(id)!);
+      const coverDeleteAction = coverDeleteActions[id];
+      const result = coverDeleteAction
+        ? await coverDeleteAction()
+        : await deleteDesaGalleryImage(galleryUrutan(id)!);
 
-    setSavingGallery(false);
+      setSavingGallery(false);
 
-    if (result.error) {
-      showToast(result.error, "error");
-      setGalleryError(result.error);
-      return;
+      if (result.error) {
+        showToast(result.error, "error");
+        setGalleryError(result.error);
+        return;
+      }
+
+      setGallerySuccess("Gambar berhasil dihapus.");
+      showToast("Gambar berhasil dihapus.", "success");
+      router.refresh();
+    } catch (err) {
+      setSavingGallery(false);
+      showToast("Gagal menghapus gambar karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setGalleryError("Terjadi kesalahan sistem saat menghapus gambar.");
+      console.error("removeImage error:", err);
     }
-
-    setGallerySuccess("Gambar berhasil dihapus.");
-    showToast("Gambar berhasil dihapus.", "success");
-    router.refresh();
   }
 
   return (

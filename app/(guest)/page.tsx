@@ -90,7 +90,7 @@ export default async function Page() {
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
           <div className="max-w-xl">
-            <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight">
               <span className="text-color5">Katalog UMKM</span>
               <br />
               <span className="text-color1">Desa Masaran</span>
@@ -109,9 +109,9 @@ export default async function Page() {
       </section>
 
       <section className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 -mt-14 sm:-mt-16">
-        <div className="rounded-2xl bg-color3 shadow-lg border border-color4/50 grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 divide-x-0 md:divide-x divide-color4/60">
+        <div className="rounded-2xl bg-color3 shadow-lg border border-color4/50 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 lg:divide-y-0 divide-x-0 sm:divide-x-0 lg:divide-x divide-color4/60">
           {stats.map(({ icon: Icon, value, label }) => (
-            <div key={label} className="flex items-center gap-3 px-6 py-6 sm:py-8">
+            <div key={label} className="flex items-center gap-3 px-6 py-5 sm:py-7">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-color4">
                 <Icon size={20} className="text-color1" />
               </span>
@@ -141,7 +141,7 @@ export default async function Page() {
           </div>
 
           <div className="relative">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {latestUmkms.map((umkm) => (
                 <UmkmCard
                   key={umkm.id}
@@ -160,10 +160,10 @@ export default async function Page() {
 
       <section className="bg-color3 pb-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-3xl bg-gradient-to-r from-color1/[0.06] via-color1/[0.12] to-color1/[0.12] p-8 lg:p-10 grid lg:grid-cols-[320px_1fr] gap-10 items-center">
+          <div className="rounded-3xl bg-gradient-to-r from-color1/[0.06] via-color1/[0.12] to-color1/[0.12] p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10 items-center">
             <ImagePlaceholder label="Ilustrasi Lapak Pasar" className="aspect-[4/3] w-full rounded-2xl" />
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               <div>
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-color3 shadow-sm mb-4">
                   <Briefcase size={20} className="text-color1" />

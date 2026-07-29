@@ -103,17 +103,24 @@ function CategorySelector({
   async function persistCategories(next: string[]) {
     setLoading(true);
     setError("");
-    const result = await updateUmkmCategories(
-      Number(umkmId),
-      next.map(Number),
-    );
-    setLoading(false);
-    if (result.error) {
-      showToast(result.error, "error");
-      setError(result.error);
-      return;
+    try {
+      const result = await updateUmkmCategories(
+        Number(umkmId),
+        next.map(Number),
+      );
+      setLoading(false);
+      if (result.error) {
+        showToast(result.error, "error");
+        setError(result.error);
+        return;
+      }
+      router.refresh();
+    } catch (err) {
+      setLoading(false);
+      showToast("Gagal menyimpan kategori karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setError("Terjadi kesalahan sistem saat menyimpan kategori.");
+      console.error("persistCategories error:", err);
     }
-    router.refresh();
   }
 
   function addCategory() {
@@ -231,35 +238,49 @@ function ProductEditor({
   async function save() {
     setSaving(true);
     setError("");
-    const result = await updateProduct(Number(umkmId), product.id, {
-      name: draft.name,
-      description: draft.description,
-      price: draft.price,
-    });
-    setSaving(false);
-    if (result.error) {
-      showToast(result.error, "error");
-      setError(result.error);
-      return;
+    try {
+      const result = await updateProduct(Number(umkmId), product.id, {
+        name: draft.name,
+        description: draft.description,
+        price: draft.price,
+      });
+      setSaving(false);
+      if (result.error) {
+        showToast(result.error, "error");
+        setError(result.error);
+        return;
+      }
+      setSaved(draft);
+      showToast("Produk berhasil diperbarui.", "success");
+      onSaved();
+    } catch (err) {
+      setSaving(false);
+      showToast("Gagal memperbarui produk karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setError("Terjadi kesalahan sistem saat memperbarui produk.");
+      console.error("save product error:", err);
     }
-    setSaved(draft);
-    showToast("Produk berhasil diperbarui.", "success");
-    onSaved();
   }
 
   async function remove() {
     if (!window.confirm("Hapus produk ini?")) return;
     setDeleting(true);
     setError("");
-    const result = await deleteProduct(Number(umkmId), product.id);
-    setDeleting(false);
-    if (result.error) {
-      showToast(result.error, "error");
-      setError(result.error);
-      return;
+    try {
+      const result = await deleteProduct(Number(umkmId), product.id);
+      setDeleting(false);
+      if (result.error) {
+        showToast(result.error, "error");
+        setError(result.error);
+        return;
+      }
+      onDeleted();
+      showToast("Produk berhasil dihapus.", "success");
+    } catch (err) {
+      setDeleting(false);
+      showToast("Gagal menghapus produk karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setError("Terjadi kesalahan sistem saat menghapus produk.");
+      console.error("remove product error:", err);
     }
-    onDeleted();
-    showToast("Produk berhasil dihapus.", "success");
   }
 
   return (
@@ -424,19 +445,26 @@ export default function UmkmManagement({
     setSavingForm(true);
     setFormError("");
     setFormSuccess("");
-    const result = await updateUmkmProfile(Number(umkmId), draftForm);
-    setSavingForm(false);
-    if (result.error) {
-      showToast(result.error, "error");
-      setFormError(result.error);
-      return;
+    try {
+      const result = await updateUmkmProfile(Number(umkmId), draftForm);
+      setSavingForm(false);
+      if (result.error) {
+        showToast(result.error, "error");
+        setFormError(result.error);
+        return;
+      }
+      const nextForm = { ...draftForm, password: "" };
+      setSavedForm(nextForm);
+      setDraftForm(nextForm);
+      setFormSuccess("Profil UMKM berhasil disimpan.");
+      showToast("Profil UMKM berhasil disimpan.", "success");
+      router.refresh();
+    } catch (err) {
+      setSavingForm(false);
+      showToast("Gagal menyimpan profil karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setFormError("Terjadi kesalahan sistem saat menyimpan profil.");
+      console.error("saveForm error:", err);
     }
-    const nextForm = { ...draftForm, password: "" };
-    setSavedForm(nextForm);
-    setDraftForm(nextForm);
-    setFormSuccess("Profil UMKM berhasil disimpan.");
-    showToast("Profil UMKM berhasil disimpan.", "success");
-    router.refresh();
   }
 
   function handleUpload(event: ChangeEvent<HTMLInputElement>, slot: string) {
@@ -468,24 +496,31 @@ export default function UmkmManagement({
     setUploadError("");
     setImageSuccess("");
 
-    for (const [slotLabel, file] of entries) {
-      const slot = slotKeys[slotLabel as (typeof imageSlots)[number]];
-      const formData = new FormData();
-      formData.set("file", file);
-      const result = await uploadUmkmImage(Number(umkmId), slot, formData);
-      if (result.error) {
-        showToast(result.error, "error");
-        setUploadError(result.error);
-        setSavingImages(false);
-        return;
+    try {
+      for (const [slotLabel, file] of entries) {
+        const slot = slotKeys[slotLabel as (typeof imageSlots)[number]];
+        const formData = new FormData();
+        formData.set("file", file);
+        const result = await uploadUmkmImage(Number(umkmId), slot, formData);
+        if (result.error) {
+          showToast(result.error, "error");
+          setUploadError(result.error);
+          setSavingImages(false);
+          return;
+        }
       }
-    }
 
-    setSavingImages(false);
-    setPendingFiles({});
-    setImageSuccess("Gambar berhasil disimpan.");
-    showToast("Gambar berhasil disimpan.", "success");
-    router.refresh();
+      setSavingImages(false);
+      setPendingFiles({});
+      setImageSuccess("Gambar berhasil disimpan.");
+      showToast("Gambar berhasil disimpan.", "success");
+      router.refresh();
+    } catch (err) {
+      setSavingImages(false);
+      showToast("Gagal menyimpan gambar karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setUploadError("Terjadi kesalahan sistem saat menyimpan gambar.");
+      console.error("saveImages error:", err);
+    }
   }
 
   function cancelImages() {
@@ -508,37 +543,51 @@ export default function UmkmManagement({
     setUploadError("");
     setImageSuccess("");
 
-    const result = await deleteUmkmImage(Number(umkmId), slot);
-    setSavingImages(false);
+    try {
+      const result = await deleteUmkmImage(Number(umkmId), slot);
+      setSavingImages(false);
 
-    if (result.error) {
-      showToast(result.error, "error");
-      setUploadError(result.error);
-      return;
+      if (result.error) {
+        showToast(result.error, "error");
+        setUploadError(result.error);
+        return;
+      }
+
+      setImageSuccess("Gambar berhasil dihapus.");
+      showToast("Gambar berhasil dihapus.", "success");
+      router.refresh();
+    } catch (err) {
+      setSavingImages(false);
+      showToast("Gagal menghapus gambar karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setUploadError("Terjadi kesalahan sistem saat menghapus gambar.");
+      console.error("removeImage error:", err);
     }
-
-    setImageSuccess("Gambar berhasil dihapus.");
-    showToast("Gambar berhasil dihapus.", "success");
-    router.refresh();
   }
 
   async function handleAddProduct() {
     setAddingProduct(true);
     setProductError("");
-    const result = await createProduct(Number(umkmId), {
-      name: "Produk Baru",
-      description: "",
-      price: "0",
-    });
-    setAddingProduct(false);
-    if (result.error) {
-      showToast(result.error, "error");
-      setProductError(result.error);
-      return;
+    try {
+      const result = await createProduct(Number(umkmId), {
+        name: "Produk Baru",
+        description: "",
+        price: "0",
+      });
+      setAddingProduct(false);
+      if (result.error) {
+        showToast(result.error, "error");
+        setProductError(result.error);
+        return;
+      }
+      setProductPage(1);
+      showToast("Produk baru berhasil ditambahkan.", "success");
+      router.refresh();
+    } catch (err) {
+      setAddingProduct(false);
+      showToast("Gagal menambahkan produk baru karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      setProductError("Terjadi kesalahan sistem saat menambahkan produk.");
+      console.error("handleAddProduct error:", err);
     }
-    setProductPage(1);
-    showToast("Produk baru berhasil ditambahkan.", "success");
-    router.refresh();
   }
 
   return (
@@ -773,12 +822,12 @@ export default function UmkmManagement({
               Kelola daftar produk yang ditampilkan pada usaha ini.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
             <button
               type="button"
               disabled={addingProduct}
               onClick={() => void handleAddProduct()}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-color1 px-4 font-bold text-white disabled:opacity-40"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-color1 px-4 font-bold text-white disabled:opacity-40 whitespace-nowrap shrink-0"
             >
               <Plus size={18} />{" "}
               {addingProduct ? "Menambahkan..." : "Tambah Produk"}

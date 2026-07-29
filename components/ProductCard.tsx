@@ -11,6 +11,8 @@ export interface ProductCardProps {
 
 export default function ProductCard({ name, description, umkmName, href, price }: ProductCardProps) {
   const formattedPrice = price ? price.replace(/^Rp\.?\s*/i, "") : "";
+  const isZero = price ? (price.trim() === "0" || Number(price.replace(/[^0-9]/g, "")) === 0) : true;
+  const showPrice = price && !isZero;
 
   const card = (
     <article className="overflow-hidden rounded-2xl border border-color4/75 bg-color3 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between h-full hover:border-color1/50">
@@ -24,7 +26,7 @@ export default function ProductCard({ name, description, umkmName, href, price }
         <p className="mt-2 text-sm leading-6 text-color5/65 flex-grow min-h-12">
           {description}
         </p>
-        {price && <p className="mt-4 text-lg font-bold text-color1">Rp. {formattedPrice}</p>}
+        {showPrice && <p className="mt-4 text-lg font-bold text-color1">Rp. {formattedPrice}</p>}
       </div>
     </article>
   );

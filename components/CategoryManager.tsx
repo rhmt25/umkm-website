@@ -27,20 +27,31 @@ export default function CategoryManager({ initialCategories }: { initialCategori
   function reset() { setName(""); setEditingId(null); setMessage(""); }
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setSaving(true); setMessage("");
-    const result = await saveCategory({ id: editingId ?? undefined, name });
-    setSaving(false);
-    if (result.error) { showToast(result.error, "error"); return setMessage(result.error); }
-    showToast(editingId ? "Kategori berhasil diperbarui." : "Kategori berhasil ditambahkan.", "success");
-    reset(); setPage(1); router.refresh();
+    try {
+      const result = await saveCategory({ id: editingId ?? undefined, name });
+      setSaving(false);
+      if (result.error) { showToast(result.error, "error"); return setMessage(result.error); }
+      showToast(editingId ? "Kategori berhasil diperbarui." : "Kategori berhasil ditambahkan.", "success");
+      reset(); setPage(1); router.refresh();
+    } catch (err) {
+      setSaving(false);
+      showToast("Gagal memproses data karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      console.error("submit error:", err);
+    }
   }
   async function remove(id: number) {
     if (!confirm("Hapus kategori ini?")) return;
-    const result = await deleteCategory(id);
-    if (result.error) { showToast(result.error, "error"); return setMessage(result.error); }
-    showToast("Kategori berhasil dihapus.", "success");
-    setCategories((items) => items.filter((item) => item.id !== id));
-    if (editingId === id) reset();
-    router.refresh();
+    try {
+      const result = await deleteCategory(id);
+      if (result.error) { showToast(result.error, "error"); return setMessage(result.error); }
+      showToast("Kategori berhasil dihapus.", "success");
+      setCategories((items) => items.filter((item) => item.id !== id));
+      if (editingId === id) reset();
+      router.refresh();
+    } catch (err) {
+      showToast("Gagal menghapus kategori karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
+      console.error("remove error:", err);
+    }
   }
   return <main className="p-5 sm:p-8 lg:p-10">
     <div><p className="text-sm font-bold uppercase tracking-wide text-color1">Manajemen Data</p><h1 className="mt-1 text-3xl font-bold">Kategori UMKM</h1><p className="mt-2 text-color5/65">Tambahkan dan kelola kategori usaha yang tersedia.</p></div>

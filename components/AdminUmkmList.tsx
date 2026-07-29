@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import UmkmCard from "@/components/UmkmCard";
 import { createClient } from "@/lib/supabase/client";
 import { FORM_LIMITS } from "@/lib/form-limits";
+import { useToast } from "@/components/ToastProvider";
 
 type UmkmItem = { id: number; name: string; owner: string; category: string; village: string; image?: string };
 
@@ -25,14 +26,23 @@ export default function AdminUmkmList() {
   const [page, setPage] = useState(1);
   const [umkmData, setUmkmData] = useState<UmkmItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from("umkm")
-      .select("id,nama,pemilik,dusun,umkm_kategori(kategori(nama)),umkm_images(slot,storage_path)")
-      .order("nama")
-      .then(({ data }) => {
+    async function loadData() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("umkm")
+          .select("id,nama,pemilik,dusun,umkm_kategori(kategori(nama)),umkm_images(slot,storage_path)")
+          .order("nama");
+
+        if (error) {
+          showToast("Gagal memuat daftar UMKM. Silakan muat ulang halaman.", "error");
+          setLoading(false);
+          return;
+        }
+
         const rows = (data ?? []) as RawUmkmRow[];
         setUmkmData(
           rows.map((item) => {
@@ -52,8 +62,14 @@ export default function AdminUmkmList() {
           }),
         );
         setLoading(false);
-      });
-  }, []);
+      } catch (err) {
+        showToast("Terjadi gangguan jaringan saat memuat daftar UMKM.", "error");
+        setLoading(false);
+        console.error("fetch umkm list error:", err);
+      }
+    }
+    void loadData();
+  }, [showToast]);
 
   const filtered = useMemo(
     () =>
@@ -133,9 +149,8 @@ export default function AdminUmkmList() {
               type="button"
               key={number}
               onClick={() => setPage(number)}
-              className={`h-10 w-10 rounded-lg font-bold ${
-                page === number ? "bg-color1 text-white" : "border border-color4 bg-color3"
-              }`}
+              className={`h-10 w-10 rounded-lg font-bold ${page === number ? "bg-color1 text-white" : "border border-color4 bg-color3"
+                }`}
             >
               {number}
             </button>

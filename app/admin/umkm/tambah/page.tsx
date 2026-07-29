@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, LockKeyhole, Save, Upload } from "lucide-react";
 import { createUmkm, type CreateUmkmState } from "./actions";
@@ -34,7 +34,16 @@ const uploads = ["Logo UMKM", "Gambar UMKM 1", "Gambar UMKM 2", "Gambar UMKM 3"]
 export default function Page() {
   const router = useRouter();
   const { showToast } = useToast();
-  const [state, formAction, isPending] = useActionState(createUmkm, {} as CreateUmkmState);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [password, setPassword] = useState("");
+  const [state, formAction, isPending] = useActionState(async (prev: CreateUmkmState, fd: FormData) => {
+    try {
+      return await createUmkm(prev, fd);
+    } catch (err) {
+      console.error(err);
+      return { error: "Terjadi gangguan jaringan atau sistem saat menghubungi server." };
+    }
+  }, {} as CreateUmkmState);
 
   useEffect(() => {
     if (state.error) showToast(state.error, "error");
@@ -60,9 +69,17 @@ export default function Page() {
                 <span className="mb-2 block text-sm font-semibold">{label}</span>
                 <span className="mb-2 block text-xs text-color5/55">{characterHint(maxLength, format)}</span>
                 {name === "alamat_lengkap" ? (
-                  <textarea name={name} rows={3} maxLength={maxLength} placeholder={`Masukkan ${label.toLowerCase()}`} className="w-full rounded-xl border border-color4 bg-color3 px-4 py-3 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15" />
+                  <textarea name={name} value={formValues[name] ?? ""} onChange={(event) => setFormValues(prev => ({ ...prev, [name]: event.target.value }))} rows={3} maxLength={maxLength} placeholder={`Masukkan ${label.toLowerCase()}`} className="w-full rounded-xl border border-color4 bg-color3 px-4 py-3 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15" />
                 ) : (
-                  <input name={name} type={type} maxLength={maxLength} inputMode={name === "rt" || name === "rw" || name === "no_wa" ? "numeric" : undefined} pattern={name === "rt" || name === "rw" ? "[0-9]*" : undefined} onInput={name === "rt" || name === "rw" ? (event) => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, ""); } : name === "no_wa" ? (event) => { event.currentTarget.value = event.currentTarget.value.replace(/[^\d+\s()-]/g, ""); } : undefined} placeholder={`Masukkan ${label.toLowerCase()}`} className="h-12 w-full rounded-xl border border-color4 bg-color3 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15" />
+                  <input name={name} value={formValues[name] ?? ""} onChange={(event) => {
+                    let val = event.target.value;
+                    if (name === "rt" || name === "rw") {
+                      val = val.replace(/\D/g, "");
+                    } else if (name === "no_wa") {
+                      val = val.replace(/[^\d+\s()-]/g, "");
+                    }
+                    setFormValues(prev => ({ ...prev, [name]: val }));
+                  }} type={type} maxLength={maxLength} inputMode={name === "rt" || name === "rw" || name === "no_wa" ? "numeric" : undefined} pattern={name === "rt" || name === "rw" ? "[0-9]*" : undefined} placeholder={`Masukkan ${label.toLowerCase()}`} className="h-12 w-full rounded-xl border border-color4 bg-color3 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15" />
                 )}
               </label>
             ))}
@@ -75,7 +92,7 @@ export default function Page() {
               <label key={name}>
                 <span className="mb-2 block text-sm font-semibold">{label}</span>
                 <span className="mb-2 block text-xs text-color5/55">{characterHint(maxLength)}</span>
-                <input name={name} maxLength={maxLength} placeholder={`Masukkan ${label.toLowerCase()}`} className="h-12 w-full rounded-xl border border-color4 bg-color3 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15" />
+                <input name={name} value={formValues[name] ?? ""} onChange={(event) => setFormValues(prev => ({ ...prev, [name]: event.target.value }))} maxLength={maxLength} placeholder={`Masukkan ${label.toLowerCase()}`} className="h-12 w-full rounded-xl border border-color4 bg-color3 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15" />
               </label>
             ))}
           </div>
@@ -89,7 +106,7 @@ export default function Page() {
         </section>
         <section className="rounded-2xl border border-color4/80 bg-color3 p-5 shadow-sm sm:p-7">
           <div className="flex items-center gap-2"><LockKeyhole className="text-color1" size={21} /><h2 className="text-xl font-bold">Keamanan Akun</h2></div>
-          <label className="mt-6 block max-w-xl"><span className="mb-2 block text-sm font-semibold">Password</span><span className="mb-2 block text-xs text-color5/55">Minimal 6 karakter • Maksimal {FORM_LIMITS.password} karakter</span><input name="password" type="password" minLength={6} maxLength={FORM_LIMITS.password} required placeholder="Masukkan password" className="h-12 w-full rounded-xl border border-color4 bg-color3 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15" /></label>
+          <label className="mt-6 block max-w-xl"><span className="mb-2 block text-sm font-semibold">Password</span><span className="mb-2 block text-xs text-color5/55">Minimal 6 karakter • Maksimal {FORM_LIMITS.password} karakter</span><input name="password" value={password} onChange={(event) => setPassword(event.target.value)} type="password" minLength={6} maxLength={FORM_LIMITS.password} required placeholder="Masukkan password" className="h-12 w-full rounded-xl border border-color4 bg-color3 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15" /></label>
         </section>
         <div className="flex flex-col-reverse gap-3 border-t border-color4 pt-7 sm:flex-row sm:justify-end"><Link href="/admin/umkm" className="rounded-xl border border-color4 bg-color3 px-6 py-3 text-center font-bold transition hover:bg-color2">Batal</Link><button type="submit" disabled={isPending} className="inline-flex items-center justify-center gap-2 rounded-xl bg-color1 px-6 py-3 font-bold text-white shadow-sm transition hover:bg-color1/90 disabled:cursor-not-allowed disabled:opacity-60"><Save size={18} /> {isPending ? "Menyimpan..." : "Simpan UMKM"}</button></div>
       </form>

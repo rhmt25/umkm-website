@@ -1,14 +1,8 @@
-import { TreePine, MapPin, Phone, Mail, LogIn } from "lucide-react";
+import { TreePine, MapPin, Phone, Mail } from "lucide-react";
 import Link from "next/link";
 import { FaYoutube as Youtube, FaFacebook as Facebook, FaInstagram as Instagram, FaTiktok as Tiktok } from "react-icons/fa6";
 import { createClient } from "@/lib/supabase/server";
-
-const navLinks = [
-  { label: "BERANDA", href: "/" },
-  { label: "DAFTAR UMKM", href: "/umkm" },
-  { label: "PRODUK", href: "/produk" },
-  { label: "TENTANG DESA", href: "/tentang-desa" },
-];
+import GuestHeader from "@/components/GuestHeader";
 
 const footerMenu = [
   { label: "Beranda", href: "/" },
@@ -40,42 +34,15 @@ export default async function GuestLayout({ children }: { children: React.ReactN
   const hasContacts = Boolean(address || contactPhone || contactEmail);
 
   return (
-    <div className="bg-color3 text-color5 min-h-screen">
-      <header className="sticky top-0 z-50 bg-color3/95 backdrop-blur border-b border-color4/60">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-6">
-          <Link href="/" className="flex items-center gap-3 shrink-0">
-            <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-color1">
-              <TreePine size={20} className="text-color1" />
-            </span>
-            <span className="flex flex-col leading-tight">
-              <span className="text-lg font-bold text-color5">UMKM Desa Masaran</span>
-              <span className="text-[11px] text-color5/55">Kecamatan Bawang, Kabupaten Banjarnegara</span>
-            </span>
-          </Link>
+    <div className="bg-color3 text-color5 min-h-screen flex flex-col justify-between">
+      <div>
+        <GuestHeader />
+        {children}
+      </div>
 
-          <nav className="hidden lg:flex items-center gap-10">
-            {navLinks.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                className="text-sm font-medium text-color5/75 transition-colors hover:text-color1"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
-          <Link href="/masuk" className="inline-flex items-center gap-2 rounded-lg bg-color1 px-6 py-3 text-sm font-semibold text-color3 hover:opacity-90 transition-opacity">
-            Masuk
-            <LogIn size={16} />
-          </Link>
-        </div>
-      </header>
-
-      {children}
-
-      <footer className="bg-color1 text-color3">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 grid md:grid-cols-4 gap-10">
-          <div className="md:col-span-2">
+      <footer className="bg-color1 text-color3 mt-auto">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          <div className="sm:col-span-2">
             <div className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-color3/70">
                 <TreePine size={16} className="text-color3" />
