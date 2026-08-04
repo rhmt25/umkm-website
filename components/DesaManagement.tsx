@@ -18,6 +18,8 @@ import {
 } from "@/app/admin/desa/actions";
 import { FORM_LIMITS, characterHint } from "@/lib/form-limits";
 import { useToast } from "@/components/ToastProvider";
+import ConfirmModal from "@/components/ConfirmModal";
+import PasswordInput from "@/components/PasswordInput";
 
 export type VillageForm = {
   address: string;
@@ -67,10 +69,7 @@ export default function DesaManagement({
   const [draftGallery, setDraftGallery] = useState(initialGallery);
   const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({});
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [formError, setFormError] = useState("");
-  const [formSuccess, setFormSuccess] = useState("");
-  const [galleryError, setGalleryError] = useState("");
-  const [gallerySuccess, setGallerySuccess] = useState("");
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [savingForm, setSavingForm] = useState(false);
   const [savingGallery, setSavingGallery] = useState(false);
 
@@ -96,14 +95,12 @@ export default function DesaManagement({
   function updateForm(key: keyof VillageForm, value: string) {
     if (key === "phone") value = value.replace(/[^\d+\s()-]/g, "");
     setDraftForm((current) => ({ ...current, [key]: value }));
-    setFormSuccess("");
   }
 
   function updateGallery(id: string, update: Partial<GalleryItem>) {
     setDraftGallery((current) =>
       current.map((item) => (item.id === id ? { ...item, ...update } : item)),
     );
-    setGallerySuccess("");
   }
 
   function uploadImage(event: ChangeEvent<HTMLInputElement>, id: string) {
@@ -114,21 +111,17 @@ export default function DesaManagement({
       !["image/jpeg", "image/png"].includes(file.type) ||
       file.size > 2 * 1024 * 1024
     ) {
-      setGalleryError("Gambar harus berformat JPEG/JPG/PNG dan maksimal 2 MB.");
-      showToast("Gambar harus berformat JPEG/JPG/PNG dan maksimal 2 MB.", "error");
+      showToast("Penyebab: Format gambar tidak sesuai atau ukuran > 2 MB.\nSolusi: Pilih foto berformat JPEG/PNG maksimal 2 MB.", "error");
       event.target.value = "";
       return;
     }
 
-    setGalleryError("");
     setPendingFiles((current) => ({ ...current, [id]: file }));
     updateGallery(id, { image: URL.createObjectURL(file) });
   }
 
   async function saveForm() {
     setSavingForm(true);
-    setFormError("");
-    setFormSuccess("");
 
     try {
       const result = await updateDesaProfile(draftForm);
@@ -136,28 +129,23 @@ export default function DesaManagement({
 
       if (result.error) {
         showToast(result.error, "error");
-        setFormError(result.error);
         return;
       }
 
       const nextSavedForm = { ...draftForm, password: "" };
       setSavedForm(nextSavedForm);
       setDraftForm(nextSavedForm);
-      setFormSuccess("Data desa berhasil disimpan.");
       showToast("Data desa berhasil disimpan.", "success");
       router.refresh();
     } catch (err) {
       setSavingForm(false);
-      showToast("Gagal menyimpan data desa karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setFormError("Terjadi kesalahan sistem saat menyimpan data desa.");
+      showToast("Penyebab: Gagal menyimpan data desa karena gangguan sistem.\nSolusi: Silakan coba beberapa saat lagi.", "error");
       console.error("saveForm error:", err);
     }
   }
 
   async function saveGallery() {
     setSavingGallery(true);
-    setGalleryError("");
-    setGallerySuccess("");
 
     try {
       const coverUploadActions: Record<string, (fd: FormData) => Promise<{ error: string | null }>> = {
@@ -175,7 +163,6 @@ export default function DesaManagement({
           const result = await coverAction(formData);
           if (result.error) {
             showToast(result.error, "error");
-            setGalleryError(result.error);
             setSavingGallery(false);
             return;
           }
@@ -188,7 +175,6 @@ export default function DesaManagement({
         const result = await uploadDesaGalleryImage(urutan, formData);
         if (result.error) {
           showToast(result.error, "error");
-          setGalleryError(result.error);
           setSavingGallery(false);
           return;
         }
@@ -207,7 +193,6 @@ export default function DesaManagement({
         );
         if (result.error) {
           showToast(result.error, "error");
-          setGalleryError(result.error);
           setSavingGallery(false);
           return;
         }
@@ -215,13 +200,11 @@ export default function DesaManagement({
 
       setSavingGallery(false);
       setPendingFiles({});
-      setGallerySuccess("Galeri desa berhasil disimpan.");
       showToast("Galeri desa berhasil disimpan.", "success");
       router.refresh();
     } catch (err) {
       setSavingGallery(false);
-      showToast("Gagal menyimpan galeri desa karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setGalleryError("Terjadi kesalahan sistem saat menyimpan galeri desa.");
+      showToast("Penyebab: Gagal menyimpan galeri desa karena gangguan jaringan.\nSolusi: Silakan coba beberapa saat lagi.", "error");
       console.error("saveGallery error:", err);
     }
   }
@@ -235,18 +218,15 @@ export default function DesaManagement({
 
     setDraftGallery(cloneGallery(savedGallery));
     setPendingFiles({});
-    setGalleryError("");
-    setGallerySuccess("");
   }
 
-  async function removeImage(id: string) {
+  async function handleConfirmDeleteImage() {
+    if (!deleteTargetId) return;
+    const id = deleteTargetId;
     const item = draftGallery.find((entry) => entry.id === id);
     if (!item?.image) return;
-    if (!window.confirm(`Hapus ${item.label}?`)) return;
 
     setSavingGallery(true);
-    setGalleryError("");
-    setGallerySuccess("");
 
     try {
       const coverDeleteActions: Record<string, () => Promise<{ error: string | null }>> = {
@@ -261,23 +241,24 @@ export default function DesaManagement({
         : await deleteDesaGalleryImage(galleryUrutan(id)!);
 
       setSavingGallery(false);
+      setDeleteTargetId(null);
 
       if (result.error) {
         showToast(result.error, "error");
-        setGalleryError(result.error);
         return;
       }
 
-      setGallerySuccess("Gambar berhasil dihapus.");
       showToast("Gambar berhasil dihapus.", "success");
       router.refresh();
     } catch (err) {
       setSavingGallery(false);
-      showToast("Gagal menghapus gambar karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setGalleryError("Terjadi kesalahan sistem saat menghapus gambar.");
+      setDeleteTargetId(null);
+      showToast("Penyebab: Gagal menghapus gambar karena gangguan sistem.\nSolusi: Silakan coba beberapa saat lagi.", "error");
       console.error("removeImage error:", err);
     }
   }
+
+  const deleteTargetItem = draftGallery.find((item) => item.id === deleteTargetId);
 
   return (
     <main className="p-5 sm:p-8 lg:p-10">
@@ -293,19 +274,9 @@ export default function DesaManagement({
 
       <section className="mt-8 rounded-2xl border border-color4/80 bg-color3 p-5 shadow-sm sm:p-7">
         <h2 className="text-xl font-bold">Informasi Desa</h2>
-        {formError && (
-          <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-            {formError}
-          </p>
-        )}
-        {formSuccess && (
-          <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-            {formSuccess}
-          </p>
-        )}
         <div className="mt-6 grid gap-5 md:grid-cols-2">
           <label className="md:col-span-2">
-            <span className="mb-2 block text-sm font-semibold">Alamat</span>
+            <span className="mb-2 block text-sm font-semibold text-color5">Alamat</span>
             <input
               value={draftForm.address}
               maxLength={FORM_LIMITS.address}
@@ -315,7 +286,7 @@ export default function DesaManagement({
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.address)}</span>
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold">No Telepon</span>
+            <span className="mb-2 block text-sm font-semibold text-color5">No Telepon</span>
             <input
               value={draftForm.phone}
               maxLength={FORM_LIMITS.phone}
@@ -326,7 +297,7 @@ export default function DesaManagement({
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.phone, "Hanya angka, +, spasi, atau tanda -")}</span>
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold">Email</span>
+            <span className="mb-2 block text-sm font-semibold text-color5">Email</span>
             <input
               type="email"
               value={draftForm.email}
@@ -337,7 +308,7 @@ export default function DesaManagement({
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.email)}</span>
           </label>
           <label className="md:col-span-2">
-            <span className="mb-2 block text-sm font-semibold">
+            <span className="mb-2 block text-sm font-semibold text-color5">
               Tentang Desa Masaran
             </span>
             <textarea
@@ -352,7 +323,7 @@ export default function DesaManagement({
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.villageDescription)}</span>
           </label>
           <label className="md:col-span-2">
-            <span className="mb-2 block text-sm font-semibold">
+            <span className="mb-2 block text-sm font-semibold text-color5">
               Link Google Maps
             </span>
             <input
@@ -365,7 +336,7 @@ export default function DesaManagement({
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold">
+            <span className="mb-2 block text-sm font-semibold text-color5">
               Link Facebook
             </span>
             <input
@@ -378,7 +349,7 @@ export default function DesaManagement({
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold">
+            <span className="mb-2 block text-sm font-semibold text-color5">
               Link Instagram
             </span>
             <input
@@ -391,7 +362,7 @@ export default function DesaManagement({
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold">
+            <span className="mb-2 block text-sm font-semibold text-color5">
               Link TikTok
             </span>
             <input
@@ -404,7 +375,7 @@ export default function DesaManagement({
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold">
+            <span className="mb-2 block text-sm font-semibold text-color5">
               Link YouTube
             </span>
             <input
@@ -417,7 +388,7 @@ export default function DesaManagement({
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.url, "URL")}</span>
           </label>
           <label>
-            <span className="mb-2 block text-sm font-semibold">Username Admin</span>
+            <span className="mb-2 block text-sm font-semibold text-color5">Username Admin</span>
             <input
               type="text"
               value={draftForm.username}
@@ -427,30 +398,21 @@ export default function DesaManagement({
             />
             <span className="mt-2 block text-xs text-color5/55">{characterHint(FORM_LIMITS.username)}</span>
           </label>
-          <label>
-            <span className="mb-2 block text-sm font-semibold">Password Admin</span>
-            <span className="mb-2 block text-xs text-color5/55">
-              Kosongkan jika tidak ingin mengubah password. Maksimal {FORM_LIMITS.password} karakter.
-            </span>
-            <input
-              type="password"
-              value={draftForm.password ?? ""}
-              maxLength={FORM_LIMITS.password}
-              onChange={(event) => updateForm("password", event.target.value)}
-              placeholder="••••••••"
-              className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
-            />
-          </label>
+          
+          <PasswordInput
+            label="Password Admin"
+            value={draftForm.password ?? ""}
+            maxLength={FORM_LIMITS.password}
+            onChange={(event) => updateForm("password", event.target.value)}
+            placeholder="••••••••"
+            hint={`Kosongkan jika tidak ingin mengubah password. Maksimal ${FORM_LIMITS.password} karakter.`}
+          />
         </div>
         <div className="mt-7 flex justify-end gap-3 border-t border-color4 pt-6">
           <button
             type="button"
             disabled={!formChanged || savingForm}
-            onClick={() => {
-              setDraftForm(savedForm);
-              setFormError("");
-              setFormSuccess("");
-            }}
+            onClick={() => setDraftForm(savedForm)}
             className="rounded-xl border border-color4 px-5 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-40"
           >
             Batal
@@ -459,9 +421,9 @@ export default function DesaManagement({
             type="button"
             disabled={!formChanged || savingForm}
             onClick={() => void saveForm()}
-            className="inline-flex items-center gap-2 rounded-xl bg-color1 px-5 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl bg-color1 px-5 py-3 font-bold text-white transition hover:bg-color1/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Save size={18} />{" "}
+            <Save size={18} />
             {savingForm ? "Menyimpan..." : "Simpan Perubahan"}
           </button>
         </div>
@@ -476,85 +438,81 @@ export default function DesaManagement({
           Klik gambar untuk membukanya dalam ukuran besar. Upload gambar baru
           untuk menambah atau mengganti gambar tersimpan.
         </p>
-        {galleryError && (
-          <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-            {galleryError}
-          </p>
-        )}
-        {gallerySuccess && (
-          <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-            {gallerySuccess}
-          </p>
-        )}
+
         <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {draftGallery.map((item) => (
             <article
               key={item.id}
-              className="rounded-2xl border border-color4/80 p-4"
+              className="rounded-2xl border border-color4/80 p-4 flex flex-col justify-between"
             >
-              <p className="font-bold">{item.label}</p>
-              <button
-                type="button"
-                disabled={!item.image}
-                onClick={() => setPreviewImage(item.image)}
-                className="mt-3 flex h-40 w-full items-center justify-center overflow-hidden rounded-xl bg-color4/65 text-sm font-semibold text-color5/50 disabled:cursor-default"
-              >
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.label}
-                    className="h-full w-full object-cover transition hover:scale-105"
-                  />
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Camera size={19} /> Gambar
-                  </span>
-                )}
-              </button>
-              <label className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-color4 px-3 py-2 text-sm font-bold text-color1 transition hover:bg-color4/45">
-                <span className="flex items-center gap-2">
-                  <Upload size={16} /> Upload
-                </span>
-                <span className="mt-1 text-[11px] font-medium text-color5/55">
-                  Maks. 2 MB • JPEG/JPG/PNG
-                </span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  disabled={savingGallery}
-                  onChange={(event) => uploadImage(event, item.id)}
-                  className="sr-only"
-                />
-              </label>
-              {item.image && (
+              <div>
+                <p className="font-bold">{item.label}</p>
                 <button
                   type="button"
-                  disabled={savingGallery}
-                  onClick={() => void removeImage(item.id)}
-                  className="mt-2 w-full rounded-lg border border-red-200 px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
+                  disabled={!item.image}
+                  onClick={() => setPreviewImage(item.image)}
+                  className="mt-3 flex h-40 w-full items-center justify-center overflow-hidden rounded-xl bg-color4/65 text-sm font-semibold text-color5/50 disabled:cursor-default"
                 >
-                  Hapus Gambar
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.label}
+                      className="h-full w-full object-cover transition hover:scale-105"
+                    />
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Camera size={19} /> Gambar
+                    </span>
+                  )}
                 </button>
-              )}
-              {!COVER_IDS.has(item.id) && (
-                <label className="mt-3 block">
-                  <span className="mb-1.5 block text-sm font-semibold">
-                    Deskripsi Gambar
+              </div>
+
+              <div className="mt-3 space-y-2">
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-color4 px-3 py-2 text-sm font-bold text-color1 transition hover:bg-color4/45">
+                  <span className="flex items-center gap-2">
+                    <Upload size={16} /> Upload
+                  </span>
+                  <span className="mt-1 text-[11px] font-medium text-color5/55">
+                    Maks. 2 MB • JPEG/JPG/PNG
                   </span>
                   <input
-                    value={item.description}
-                    maxLength={FORM_LIMITS.imageDescription}
-                    onChange={(event) =>
-                      updateGallery(item.id, {
-                        description: event.target.value,
-                      })
-                    }
-                    placeholder={`Deskripsi ${item.label.toLowerCase()}`}
-                    className="h-10 w-full rounded-lg border border-color4 px-3 text-sm outline-none focus:border-color1"
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    disabled={savingGallery}
+                    onChange={(event) => uploadImage(event, item.id)}
+                    className="sr-only"
                   />
-                  <span className="mt-1 block text-xs text-color5/55">{characterHint(FORM_LIMITS.imageDescription)}</span>
                 </label>
-              )}
+                {item.image && (
+                  <button
+                    type="button"
+                    disabled={savingGallery}
+                    onClick={() => setDeleteTargetId(item.id)}
+                    className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
+                  >
+                    Hapus Gambar
+                  </button>
+                )}
+                {!COVER_IDS.has(item.id) && (
+                  <label className="mt-3 block">
+                    <span className="mb-1.5 block text-sm font-semibold text-color5">
+                      Deskripsi Gambar
+                    </span>
+                    <input
+                      value={item.description}
+                      maxLength={FORM_LIMITS.imageDescription}
+                      onChange={(event) =>
+                        updateGallery(item.id, {
+                          description: event.target.value,
+                        })
+                      }
+                      placeholder={`Deskripsi ${item.label.toLowerCase()}`}
+                      className="h-10 w-full rounded-lg border border-color4 px-3 text-sm outline-none focus:border-color1"
+                    />
+                    <span className="mt-1 block text-xs text-color5/55">{characterHint(FORM_LIMITS.imageDescription)}</span>
+                  </label>
+                )}
+              </div>
             </article>
           ))}
         </div>
@@ -571,20 +529,21 @@ export default function DesaManagement({
             type="button"
             disabled={!galleryChanged || savingGallery}
             onClick={() => void saveGallery()}
-            className="inline-flex items-center gap-2 rounded-xl bg-color1 px-5 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl bg-color1 px-5 py-3 font-bold text-white transition hover:bg-color1/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Save size={18} />{" "}
+            <Save size={18} />
             {savingGallery ? "Menyimpan..." : "Simpan Gambar"}
           </button>
         </div>
       </section>
 
+      {/* Lightbox Preview */}
       {previewImage && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Preview gambar"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-color5/75 p-5"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-color5/75 p-5 backdrop-blur-xs"
           onClick={() => setPreviewImage(null)}
         >
           <div
@@ -615,6 +574,19 @@ export default function DesaManagement({
           </div>
         </div>
       )}
+
+      {/* Custom Confirm Modal Hapus Gambar */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTargetId)}
+        title="Hapus Gambar Desa?"
+        message={`Apakah Anda yakin ingin menghapus ${deleteTargetItem?.label ?? "gambar ini"}?`}
+        confirmLabel="Hapus Gambar"
+        cancelLabel="Batal"
+        variant="danger"
+        isLoading={savingGallery}
+        onConfirm={() => void handleConfirmDeleteImage()}
+        onClose={() => setDeleteTargetId(null)}
+      />
     </main>
   );
 }

@@ -2,8 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Building2, ChevronLeft, Home, LayoutGrid, MapPinned, TreePine, Menu, X } from "lucide-react";
+import Image from "next/image";
+import {
+  Building2,
+  Home,
+  LayoutGrid,
+  MapPinned,
+  Menu,
+  X,
+  LogOut,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
+import ConfirmModal from "@/components/ConfirmModal";
+import { logout } from "@/app/(guest)/masuk/actions";
 
 const adminNavigation = [
   { label: "Beranda", href: "/admin", icon: Home },
@@ -17,25 +28,47 @@ type AdminSidebarProps = {
   umkmId?: number;
 };
 
-export default function AdminSidebar({ role, umkmId }: AdminSidebarProps) {
+export default function AdminSidebar({ role }: AdminSidebarProps) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const navigation = role === "admin"
-    ? adminNavigation
-    : [
-        { label: "Beranda", href: "/admin", icon: Home },
-        { label: "UMKM", href: "/admin/umkm/me", icon: Building2 },
-      ];
+  const navigation =
+    role === "admin"
+      ? adminNavigation
+      : [
+          { label: "Beranda", href: "/admin", icon: Home },
+          { label: "UMKM", href: "/admin/umkm/me", icon: Building2 },
+        ];
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
+    }
+  }
 
   const sidebarContent = (
     <>
       <div className="flex items-center justify-between border-b border-color3/15 px-6 py-6 shrink-0">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-color3 text-color1"><TreePine size={23} /></span>
+          <Image
+            src="/favicon.ico"
+            alt="Logo UMKM Masaran"
+            width={44}
+            height={44}
+            className="h-11 w-11 object-contain"
+            unoptimized
+          />
           <span>
             <span className="block text-lg font-bold text-color3">UMKM Masaran</span>
-            <span className="text-xs text-color3/65">{role === "admin" ? "Panel Administrasi" : "Panel UMKM"}</span>
+            <span className="text-xs text-color3/65">
+              {role === "admin" ? "Panel Administrasi" : "Panel UMKM"}
+            </span>
           </span>
         </div>
         {/* Mobile close button */}
@@ -51,14 +84,18 @@ export default function AdminSidebar({ role, umkmId }: AdminSidebarProps) {
 
       <nav className="flex-1 space-y-2 px-4 py-5 md:overflow-y-auto">
         {navigation.map(({ label, href, icon: Icon }) => {
-          const active = href !== "#" && (href === "/admin" ? pathname === href : pathname.startsWith(href));
+          const active =
+            href !== "#" &&
+            (href === "/admin" ? pathname === href : pathname.startsWith(href));
           return (
             <Link
               key={label}
               href={href}
               onClick={() => setIsOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                active ? "bg-color3 text-color1 shadow-sm" : "text-color3/70 hover:bg-color3/10 hover:text-color3"
+                active
+                  ? "bg-color3 text-color1 shadow-sm"
+                  : "text-color3/70 hover:bg-color3/10 hover:text-color3"
               }`}
             >
               <Icon size={19} /> {label}
@@ -67,14 +104,18 @@ export default function AdminSidebar({ role, umkmId }: AdminSidebarProps) {
         })}
       </nav>
 
+      {/* Logout button replacing Kembali ke Website */}
       <div className="border-t border-color3/15 p-5 shrink-0">
-        <Link
-          href="/"
-          onClick={() => setIsOpen(false)}
-          className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-color3/75 hover:bg-color3/10 hover:text-color3"
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(false);
+            setShowLogoutConfirm(true);
+          }}
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-200 hover:bg-red-500/20 hover:text-white transition"
         >
-          <ChevronLeft size={19} /> Kembali ke Website
-        </Link>
+          <LogOut size={19} /> Keluar Akun
+        </button>
       </div>
     </>
   );
@@ -84,7 +125,14 @@ export default function AdminSidebar({ role, umkmId }: AdminSidebarProps) {
       {/* Mobile Top Navigation Bar */}
       <div className="flex h-16 w-full items-center justify-between bg-color1 px-6 text-color3 border-b border-color3/15 fixed top-0 left-0 z-40 md:hidden shadow-sm">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-color3 text-color1"><TreePine size={18} /></span>
+          <Image
+            src="/favicon.ico"
+            alt="Logo UMKM Masaran"
+            width={36}
+            height={36}
+            className="h-9 w-9 object-contain"
+            unoptimized
+          />
           <span className="text-base font-bold">UMKM Masaran</span>
         </div>
         <button
@@ -113,6 +161,19 @@ export default function AdminSidebar({ role, umkmId }: AdminSidebarProps) {
       >
         {sidebarContent}
       </aside>
+
+      {/* Custom Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showLogoutConfirm}
+        title="Keluar Sesi Akun?"
+        message="Apakah Anda yakin ingin keluar dari panel pengelola? Anda harus masuk kembali untuk mengelola data usaha atau desa."
+        confirmLabel="Keluar Akun"
+        cancelLabel="Batal"
+        variant="danger"
+        isLoading={isLoggingOut}
+        onConfirm={() => void handleLogout()}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
     </>
   );
 }

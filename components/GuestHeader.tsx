@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TreePine, LogIn, Menu, X } from "lucide-react";
+import Image from "next/image";
+import { LogIn, Menu, X } from "lucide-react";
 
 const navLinks = [
   { label: "BERANDA", href: "/" },
@@ -20,9 +21,14 @@ export default function GuestHeader() {
     <header className="sticky top-0 z-50 bg-color3/95 backdrop-blur border-b border-color4/60">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-6">
         <Link href="/" className="flex items-center gap-3 shrink-0" onClick={() => setIsOpen(false)}>
-          <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-color1">
-            <TreePine size={20} className="text-color1" />
-          </span>
+          <Image
+            src="/favicon.ico"
+            alt="Logo UMKM Desa Masaran"
+            width={44}
+            height={44}
+            className="h-11 w-11 object-contain"
+            unoptimized
+          />
           <span className="flex flex-col leading-tight">
             <span className="text-base sm:text-lg font-bold text-color5">UMKM Desa Masaran</span>
             <span className="text-[10px] sm:text-[11px] text-color5/55">Kecamatan Bawang, Banjarnegara</span>

@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Search } from "lucide-react";
 import UmkmCard from "@/components/UmkmCard";
+import ConfirmModal from "@/components/ConfirmModal";
 import { createClient } from "@/lib/supabase/client";
 import { FORM_LIMITS } from "@/lib/form-limits";
 import { useToast } from "@/components/ToastProvider";
+import { deleteUmkm } from "@/app/admin/umkm/[id]/actions";
 
 type UmkmItem = { id: number; name: string; owner: string; category: string; village: string; image?: string };
 
@@ -23,62 +25,112 @@ const PER_PAGE = 12;
 
 export default function AdminUmkmList() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [umkmData, setUmkmData] = useState<UmkmItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<UmkmItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { showToast } = useToast();
 
+  // Debounce search effect (300ms)
   useEffect(() => {
-    async function loadData() {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("umkm")
-          .select("id,nama,pemilik,dusun,umkm_kategori(kategori(nama)),umkm_images(slot,storage_path)")
-          .order("nama");
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-        if (error) {
-          showToast("Gagal memuat daftar UMKM. Silakan muat ulang halaman.", "error");
-          setLoading(false);
-          return;
-        }
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("umkm")
+        .select("id,nama,pemilik,dusun,umkm_kategori(kategori(nama)),umkm_images(slot,storage_path)")
+        .order("nama");
 
-        const rows = (data ?? []) as RawUmkmRow[];
-        setUmkmData(
-          rows.map((item) => {
-            const logo = item.umkm_images?.find((image) => image.slot === "logo");
-            return {
-              id: item.id,
-              name: item.nama,
-              owner: item.pemilik,
-              village: item.dusun ?? "-",
-              category:
-                item.umkm_kategori?.map((row) => row.kategori?.nama).filter(Boolean).join(", ") ||
-                "Belum ada kategori",
-              image: logo
-                ? supabase.storage.from("umkm-media").getPublicUrl(logo.storage_path).data.publicUrl
-                : undefined,
-            };
-          }),
+      if (error) {
+        showToast(
+          "Penyebab: Gagal mengambil data daftar UMKM dari database server.\nSolusi: Silakan muat ulang halaman ini.",
+          "error"
         );
         setLoading(false);
-      } catch (err) {
-        showToast("Terjadi gangguan jaringan saat memuat daftar UMKM.", "error");
-        setLoading(false);
-        console.error("fetch umkm list error:", err);
+        return;
       }
+
+      const rows = (data ?? []) as RawUmkmRow[];
+      setUmkmData(
+        rows.map((item) => {
+          const logo = item.umkm_images?.find((image) => image.slot === "logo");
+          return {
+            id: item.id,
+            name: item.nama,
+            owner: item.pemilik,
+            village: item.dusun ?? "-",
+            category:
+              item.umkm_kategori?.map((row) => row.kategori?.nama).filter(Boolean).join(", ") ||
+              "Belum ada kategori",
+            image: logo
+              ? supabase.storage.from("umkm-media").getPublicUrl(logo.storage_path).data.publicUrl
+              : undefined,
+          };
+        })
+      );
+      setLoading(false);
+    } catch (err) {
+      showToast(
+        "Penyebab: Terjadi gangguan jaringan saat memuat data UMKM.\nSolusi: Periksa koneksi internet Anda dan coba lagi.",
+        "error"
+      );
+      setLoading(false);
+      console.error("fetch umkm list error:", err);
     }
-    void loadData();
   }, [showToast]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+
+    try {
+      const res = await deleteUmkm(deleteTarget.id);
+      setIsDeleting(false);
+
+      if (res.error) {
+        showToast(res.error, "error");
+        return;
+      }
+
+      // Instant real-time UI update without reload
+      setUmkmData((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      showToast(`UMKM "${deleteTarget.name}" berhasil dihapus beserta seluruh datanya.`, "success");
+      setDeleteTarget(null);
+    } catch (err) {
+      setIsDeleting(false);
+      showToast(
+        "Gagal Menghapus UMKM\nPenyebab: Gagal menghapus UMKM karena gangguan jaringan atau server.\nSolusi: Silakan coba lagi beberapa saat lagi.",
+        "error"
+      );
+      console.error("delete umkm error:", err);
+    }
+  };
 
   const filtered = useMemo(
     () =>
       umkmData.filter(
         (item) =>
-          item.name.toLowerCase().includes(search.toLowerCase()) ||
-          item.owner.toLowerCase().includes(search.toLowerCase()),
+          item.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          item.owner.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          item.category.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          item.village.toLowerCase().includes(debouncedSearch.toLowerCase())
       ),
-    [search, umkmData],
+    [debouncedSearch, umkmData]
   );
 
   const totalPage = Math.ceil(filtered.length / PER_PAGE);
@@ -105,11 +157,8 @@ export default function AdminUmkmList() {
         <input
           value={search}
           maxLength={FORM_LIMITS.search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-            setPage(1);
-          }}
-          placeholder="Cari nama UMKM atau pemilik..."
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Cari nama UMKM, pemilik, kategori, atau dusun..."
           className="h-12 w-full rounded-xl border border-color4 bg-color3 pl-11 pr-4 outline-none transition focus:border-color1 focus:ring-2 focus:ring-color1/15"
         />
       </div>
@@ -124,6 +173,8 @@ export default function AdminUmkmList() {
             location={`Dusun ${item.village}`}
             image={item.image}
             href={`/admin/umkm/${item.id}`}
+            onDelete={() => setDeleteTarget(item)}
+            isDeleting={isDeleting && deleteTarget?.id === item.id}
           />
         ))}
       </div>
@@ -149,8 +200,9 @@ export default function AdminUmkmList() {
               type="button"
               key={number}
               onClick={() => setPage(number)}
-              className={`h-10 w-10 rounded-lg font-bold ${page === number ? "bg-color1 text-white" : "border border-color4 bg-color3"
-                }`}
+              className={`h-10 w-10 rounded-lg font-bold ${
+                page === number ? "bg-color1 text-white" : "border border-color4 bg-color3"
+              }`}
             >
               {number}
             </button>
@@ -165,6 +217,19 @@ export default function AdminUmkmList() {
           </button>
         </div>
       )}
+
+      {/* Custom Confirm Modal for Delete UMKM */}
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="Hapus UMKM ini?"
+        message={`Apakah Anda yakin ingin menghapus data UMKM "${deleteTarget?.name}"? Seluruh foto, kategori, dan produk yang terkait akan dihapus secara permanen.`}
+        confirmLabel="Hapus UMKM"
+        cancelLabel="Batal"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={() => void handleDeleteConfirm()}
+        onClose={() => setDeleteTarget(null)}
+      />
     </main>
   );
 }

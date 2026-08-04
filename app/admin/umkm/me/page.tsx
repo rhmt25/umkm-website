@@ -47,7 +47,7 @@ export default async function Page() {
   ] = await Promise.all([
     supabase
       .from("produk")
-      .select("id,nama,deskripsi,harga")
+      .select("id,nama,deskripsi,harga,harga_max,is_range")
       .eq("id_umkm", id)
       .order("id"),
     supabase.from("kategori").select("id,nama").order("nama"),
@@ -60,6 +60,8 @@ export default async function Page() {
     name: product.nama,
     description: product.deskripsi ?? "",
     price: String(Math.round(Number(product.harga))),
+    priceMax: product.harga_max != null ? String(Math.round(Number(product.harga_max))) : "",
+    isRange: Boolean(product.is_range),
   }));
 
   const initialImages: Record<string, { url: string; name: string }> = {};

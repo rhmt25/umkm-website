@@ -10,3 +10,17 @@
   --color-color4: #f2eac7;
   --color-color5: #412712;
 }
+
+/* Hide native browser password reveal eye button */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}
+
+/* Base resets & utilities for form inputs */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #fcfbf6 inset !important;
+  -webkit-text-fill-color: #412712 !important;
+}

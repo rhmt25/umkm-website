@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { FORM_LIMITS } from "@/lib/form-limits";
 
-type LoginState = { error?: string };
+export type LoginState = { error?: string; redirectUrl?: string };
 
 function normalizePhone(value: string) {
   const digits = value.replace(/\D/g, "");
@@ -22,11 +22,16 @@ function umkmAuthEmailFromPhone(phone: string) {
   return `umkm+${digits}@umkm.local`;
 }
 
-async function ensureUmkmEmailIdentity(admin: ReturnType<typeof createAdminClient>, umkmUserId: string, normalizedPhone: string) {
+async function ensureUmkmEmailIdentity(
+  admin: ReturnType<typeof createAdminClient>,
+  umkmUserId: string,
+  normalizedPhone: string,
+) {
   const expectedEmail = umkmAuthEmailFromPhone(normalizedPhone);
-  const { data: user, error: userError } = await admin.auth.admin.getUserById(umkmUserId);
+  const { data: user, error: userError } =
+    await admin.auth.admin.getUserById(umkmUserId);
   if (userError || !user.user) {
-    throw new Error("Gagal memuat akun UMKM.");
+    throw new Error("Gagal Masuk\nPenyebab: Akun UMKM gagal dimuat.\nSolusi: Hubungi pihak admin desa.");
   }
 
   if (user.user.email !== expectedEmail) {
@@ -35,7 +40,7 @@ async function ensureUmkmEmailIdentity(admin: ReturnType<typeof createAdminClien
       email_confirm: true,
     });
     if (error) {
-      throw new Error("Gagal memperbarui identitas akun UMKM.");
+      throw new Error("Gagal Masuk\nPenyebab: Gagal memperbarui identitas akun UMKM.\nSolusi: Silakan coba lagi nanti.");
     }
     await admin.from("profiles").update({ login_email: expectedEmail }).eq("id", umkmUserId);
   }
@@ -50,10 +55,19 @@ export async function login(
     const password = String(formData.get("password") ?? "");
 
     if (!identity || !password) {
-      return { error: "Nomor HP atau username dan password wajib diisi." };
+      return {
+        error:
+          "Gagal Masuk\nPenyebab: Identitas (Nomor HP/Username) atau Password belum diisi.\nSolusi: Mohon lengkapi seluruh kolom masukan yang wajib diisi.",
+      };
     }
-    if (identity.length > FORM_LIMITS.username || password.length > FORM_LIMITS.password) {
-      return { error: "Data masuk melebihi batas karakter yang diizinkan." };
+    if (
+      identity.length > FORM_LIMITS.username ||
+      password.length > FORM_LIMITS.password
+    ) {
+      return {
+        error:
+          "Gagal Masuk\nPenyebab: Isian karakter melebihi batas yang diizinkan.\nSolusi: Kurangi jumlah karakter masukan Anda.",
+      };
     }
 
     const supabase = await createClient();
@@ -72,7 +86,12 @@ export async function login(
             .maybeSingle();
 
           if (!umkm?.user_id) {
-            return { data: null, error: new Error("Akun tidak ditemukan.") };
+            return {
+              data: null,
+              error: new Error(
+                "Gagal Masuk\nPenyebab: Akun UMKM dengan nomor WhatsApp ini tidak terdaftar.\nSolusi: Periksa kembali nomor yang Anda masukkan atau hubungi Admin.",
+              ),
+            };
           }
 
           await ensureUmkmEmailIdentity(admin, umkm.user_id, normalizedPhone);
@@ -92,7 +111,12 @@ export async function login(
             .maybeSingle();
 
           if (!profile?.login_email) {
-            return { data: null, error: new Error("Akun tidak ditemukan.") };
+            return {
+              data: null,
+              error: new Error(
+                "Gagal Masuk\nPenyebab: Akun admin tidak ditemukan.\nSolusi: Pastikan username admin Anda sudah benar.",
+              ),
+            };
           }
 
           return supabase.auth.signInWithPassword({
@@ -102,7 +126,10 @@ export async function login(
         })();
 
     if (error || !data.user) {
-      return { error: "Nomor HP/username atau password tidak sesuai." };
+      return {
+        error:
+          "Gagal Masuk\nPenyebab: Nomor HP/Username atau Password tidak sesuai.\nSolusi: Periksa kembali ejaan username/nomor HP serta kata sandi Anda.",
+      };
     }
 
     const admin = createAdminClient();
@@ -112,7 +139,7 @@ export async function login(
       .eq("id", data.user.id)
       .maybeSingle();
 
-    if (profile?.role === "admin") redirect("/admin");
+    if (profile?.role === "admin") return { redirectUrl: "/admin" };
 
     const { data: umkm } = await admin
       .from("umkm")
@@ -122,23 +149,26 @@ export async function login(
 
     if (!umkm) {
       await supabase.auth.signOut();
-      return { error: "Profil UMKM untuk akun ini belum tersedia." };
+      return {
+        error:
+          "Gagal Masuk\nPenyebab: Profil UMKM belum dikaitkan dengan akun ini.\nSolusi: Hubungi administrator untuk penautan akun.",
+      };
     }
 
-    redirect(`/admin/umkm/${umkm.id}`);
+    return { redirectUrl: "/admin" };
   } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message.includes("NEXT_REDIRECT") ||
-        (error as { digest?: string }).digest?.includes("NEXT_REDIRECT"))
-    ) {
-      throw error;
-    }
     return {
       error:
         error instanceof Error
           ? error.message
-          : "Gagal masuk karena gangguan sistem. Silakan coba beberapa saat lagi.",
+          : "Gagal Masuk\nPenyebab: Gangguan koneksi atau masalah sistem pada server.\nSolusi: Silakan coba beberapa saat lagi.",
     };
   }
 }
+
+export async function logout() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/masuk");
+}
+

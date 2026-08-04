@@ -1,4 +1,5 @@
-import { TreePine, MapPin, Phone, Mail } from "lucide-react";
+import Image from "next/image";
+import { MapPin, Phone, Mail } from "lucide-react";
 import Link from "next/link";
 import { FaYoutube as Youtube, FaFacebook as Facebook, FaInstagram as Instagram, FaTiktok as Tiktok } from "react-icons/fa6";
 import { createClient } from "@/lib/supabase/server";
@@ -45,9 +46,14 @@ export default async function GuestLayout({ children }: { children: React.ReactN
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           <div className="sm:col-span-2">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-color3/70">
-                <TreePine size={16} className="text-color3" />
-              </span>
+              <Image
+                src="/favicon.ico"
+                alt="Logo UMKM Desa Masaran"
+                width={36}
+                height={36}
+                className="h-9 w-9 object-contain"
+                unoptimized
+              />
               <span className="text-lg font-bold text-color3">UMKM Desa Masaran</span>
             </div>
 

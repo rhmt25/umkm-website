@@ -10,7 +10,6 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   ImagePlus,
   Plus,
   Save,
@@ -30,32 +29,42 @@ import {
 } from "@/app/admin/umkm/[id]/actions";
 import { FORM_LIMITS, characterHint } from "@/lib/form-limits";
 import { useToast } from "@/components/ToastProvider";
+import ConfirmModal from "@/components/ConfirmModal";
+import PasswordInput from "@/components/PasswordInput";
 
-type UmkmForm = Record<(typeof formFields)[number][0], string>;
-type Product = { id: number; name: string; description: string; price: string };
+type Product = {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  priceMax?: string;
+  isRange?: boolean;
+};
 type UploadedImage = { name: string; url: string };
 
 const formFields = [
-  ["nama", "Nama UMKM", "text", FORM_LIMITS.umkmName],
-  ["pemilik", "Nama Pemilik", "text", FORM_LIMITS.personName],
-  ["rt", "RT", "text", FORM_LIMITS.rtRw, "Hanya angka"],
-  ["rw", "RW", "text", FORM_LIMITS.rtRw, "Hanya angka"],
-  ["dukuh", "Dukuh", "text", FORM_LIMITS.villageName],
-  ["dusun", "Dusun", "text", FORM_LIMITS.villageName],
-  ["alamat_lengkap", "Alamat Lengkap", "text", FORM_LIMITS.address],
-  ["no_wa", "Nomor WhatsApp", "tel", FORM_LIMITS.phone, "Hanya angka, +, spasi, atau tanda -"],
-  ["instagram", "Instagram", "text", FORM_LIMITS.socialHandle],
-  ["tiktok", "TikTok", "text", FORM_LIMITS.socialHandle],
-  ["facebook", "Facebook", "text", FORM_LIMITS.socialHandle],
-  ["shopee", "Shopee", "url", FORM_LIMITS.url],
-  ["tokopedia", "Tokopedia", "url", FORM_LIMITS.url],
-  ["google_maps", "Google Maps", "url", FORM_LIMITS.url],
-  ["keunggulan1", "Keunggulan Produk 1", "text", FORM_LIMITS.advantage],
-  ["keunggulan2", "Keunggulan Produk 2", "text", FORM_LIMITS.advantage],
-  ["keunggulan3", "Keunggulan Produk 3", "text", FORM_LIMITS.advantage],
-  ["keunggulan4", "Keunggulan Produk 4", "text", FORM_LIMITS.advantage],
-  ["password", "Password", "password", FORM_LIMITS.password],
+  ["nama", "Nama UMKM", "text", FORM_LIMITS.umkmName, undefined, true],
+  ["pemilik", "Nama Pemilik", "text", FORM_LIMITS.personName, undefined, true],
+  ["rt", "RT", "text", FORM_LIMITS.rtRw, "Hanya angka", true],
+  ["rw", "RW", "text", FORM_LIMITS.rtRw, "Hanya angka", true],
+  ["dukuh", "Dukuh", "text", FORM_LIMITS.villageName, undefined, true],
+  ["dusun", "Dusun", "text", FORM_LIMITS.villageName, undefined, true],
+  ["alamat_lengkap", "Alamat Lengkap", "text", FORM_LIMITS.address, undefined, true],
+  ["no_wa", "Nomor WhatsApp", "tel", FORM_LIMITS.phone, "Hanya angka, +, spasi, atau tanda -", true],
+  ["instagram", "Instagram", "text", FORM_LIMITS.socialHandle, undefined, false],
+  ["tiktok", "TikTok", "text", FORM_LIMITS.socialHandle, undefined, false],
+  ["facebook", "Facebook", "text", FORM_LIMITS.socialHandle, undefined, false],
+  ["shopee", "Shopee", "url", FORM_LIMITS.url, undefined, false],
+  ["tokopedia", "Tokopedia", "url", FORM_LIMITS.url, undefined, false],
+  ["google_maps", "Google Maps", "url", FORM_LIMITS.url, undefined, false],
+  ["keunggulan1", "Keunggulan Produk 1", "text", FORM_LIMITS.advantage, undefined, false],
+  ["keunggulan2", "Keunggulan Produk 2", "text", FORM_LIMITS.advantage, undefined, false],
+  ["keunggulan3", "Keunggulan Produk 3", "text", FORM_LIMITS.advantage, undefined, false],
+  ["keunggulan4", "Keunggulan Produk 4", "text", FORM_LIMITS.advantage, undefined, false],
+  ["password", "Password", "password", FORM_LIMITS.password, undefined, false],
 ] as const;
+
+type UmkmForm = Record<(typeof formFields)[number][0], string>;
 
 const defaultForm = Object.fromEntries(
   formFields.map(([key]) => [key, ""]),
@@ -93,7 +102,6 @@ function CategorySelector({
   const [category, setCategory] = useState<CategoryOption | null>(null);
   const [selectedCategories, setSelectedCategories] = useState(selectedIds);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const canAdd = Boolean(category && !selectedCategories.includes(category.value));
 
   useEffect(() => {
@@ -102,7 +110,6 @@ function CategorySelector({
 
   async function persistCategories(next: string[]) {
     setLoading(true);
-    setError("");
     try {
       const result = await updateUmkmCategories(
         Number(umkmId),
@@ -111,14 +118,13 @@ function CategorySelector({
       setLoading(false);
       if (result.error) {
         showToast(result.error, "error");
-        setError(result.error);
         return;
       }
+      showToast("Kategori berhasil diperbarui.", "success");
       router.refresh();
     } catch (err) {
       setLoading(false);
-      showToast("Gagal menyimpan kategori karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setError("Terjadi kesalahan sistem saat menyimpan kategori.");
+      showToast("Penyebab: Gagal menyimpan kategori karena gangguan sistem.\nSolusi: Silakan coba beberapa saat lagi.", "error");
       console.error("persistCategories error:", err);
     }
   }
@@ -143,11 +149,7 @@ function CategorySelector({
       <p className="mt-2 text-sm text-color5/60">
         Pilih satu atau beberapa kategori yang sesuai dengan UMKM ini.
       </p>
-      {error && (
-        <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-          {error}
-        </p>
-      )}
+
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <div className="flex-1">
           <Select<CategoryOption>
@@ -180,16 +182,17 @@ function CategorySelector({
           type="button"
           disabled={!canAdd || loading}
           onClick={addCategory}
-          className="h-12 rounded-xl bg-color1 px-5 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="h-12 rounded-xl bg-color1 px-5 font-bold text-white transition hover:bg-color1/90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Tambah
         </button>
       </div>
+
       <div className="mt-5 flex flex-wrap gap-2">
         {selectedCategories.map((item) => (
           <span
             key={item}
-            className="inline-flex items-center gap-2 rounded-full bg-color4 px-3 py-2 text-sm font-semibold text-color5"
+            className="inline-flex items-center gap-2 rounded-full bg-color4 px-3.5 py-2 text-sm font-semibold text-color5"
           >
             {options.find((option) => option.value === item)?.label}
             <button
@@ -223,7 +226,7 @@ function ProductEditor({
   const [draft, setDraft] = useState(product);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState("");
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const { showToast } = useToast();
   const changed = JSON.stringify(saved) !== JSON.stringify(draft);
 
@@ -232,78 +235,104 @@ function ProductEditor({
     setDraft(product);
   }, [product]);
 
-  const update = (key: keyof Product, value: string) =>
+  const update = (key: keyof Product, value: string | boolean) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
+  const nameError = !draft.name.trim();
+
   async function save() {
+    if (nameError) {
+      showToast(
+        "Gagal Memperbarui Produk\nPenyebab: Nama produk tidak boleh kosong.\nSolusi: Masukkan nama produk terlebih dahulu sebelum menyimpan.",
+        "error"
+      );
+      return;
+    }
+
+    if (draft.isRange) {
+      const minVal = Number(draft.price.replace(/\D/g, "") || "0");
+      const maxVal = Number((draft.priceMax ?? "").replace(/\D/g, "") || "0");
+      if (maxVal < minVal) {
+        showToast(
+          "Gagal Memperbarui Produk\nPenyebab: Batas maksimal harga tidak boleh lebih kecil dari batas minimal harga.\nSolusi: Pastikan nominal batas maksimal lebih besar atau sama dengan batas minimal.",
+          "error"
+        );
+        return;
+      }
+    }
+
     setSaving(true);
-    setError("");
     try {
       const result = await updateProduct(Number(umkmId), product.id, {
         name: draft.name,
         description: draft.description,
         price: draft.price,
+        priceMax: draft.priceMax,
+        isRange: draft.isRange,
       });
       setSaving(false);
       if (result.error) {
         showToast(result.error, "error");
-        setError(result.error);
         return;
       }
       setSaved(draft);
-      showToast("Produk berhasil diperbarui.", "success");
+      showToast("Produk berhasil diperbarui.", "success", "Berhasil Memperbarui Produk");
       onSaved();
     } catch (err) {
       setSaving(false);
-      showToast("Gagal memperbarui produk karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setError("Terjadi kesalahan sistem saat memperbarui produk.");
+      showToast("Gagal Memperbarui Produk\nPenyebab: Terjadi gangguan jaringan.\nSolusi: Silakan coba beberapa saat lagi.", "error");
       console.error("save product error:", err);
     }
   }
 
   async function remove() {
-    if (!window.confirm("Hapus produk ini?")) return;
     setDeleting(true);
-    setError("");
     try {
       const result = await deleteProduct(Number(umkmId), product.id);
       setDeleting(false);
+      setShowConfirmDelete(false);
       if (result.error) {
         showToast(result.error, "error");
-        setError(result.error);
         return;
       }
       onDeleted();
-      showToast("Produk berhasil dihapus.", "success");
+      showToast("Produk berhasil dihapus.", "success", "Berhasil Menghapus Produk");
     } catch (err) {
       setDeleting(false);
-      showToast("Gagal menghapus produk karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setError("Terjadi kesalahan sistem saat menghapus produk.");
+      setShowConfirmDelete(false);
+      showToast("Gagal Menghapus Produk\nPenyebab: Gangguan jaringan.\nSolusi: Silakan coba beberapa saat lagi.", "error");
       console.error("remove product error:", err);
     }
   }
 
   return (
-    <article className="rounded-2xl border border-color4/80 bg-color3 p-4 shadow-sm">
-      <h3 className="font-bold text-color1">Produk</h3>
-      {error && (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600">
-          {error}
-        </p>
-      )}
-      <div className="mt-3 space-y-3">
+    <article className="rounded-2xl border border-color4/80 bg-color3 p-4 shadow-sm flex flex-col justify-between">
+      <div className="space-y-3">
+        <h3 className="font-bold text-color1">Edit Produk</h3>
+
         <label className="block">
-          <span className="mb-1.5 block text-sm font-semibold">Nama Produk</span>
+          <span className="mb-1.5 block text-sm font-semibold text-color5">
+            Nama Produk <span className="text-red-500">*</span>
+          </span>
           <input
             value={draft.name}
             maxLength={FORM_LIMITS.productName}
             onChange={(event) => update("name", event.target.value)}
-            className="h-10 w-full rounded-lg border border-color4 px-3 outline-none focus:border-color1"
+            className={`h-10 w-full rounded-lg border px-3 outline-none transition ${
+              nameError
+                ? "border-red-500 bg-red-50/20 focus:border-red-600"
+                : "border-color4 focus:border-color1"
+            }`}
           />
-          <span className="mt-1 block text-xs text-color5/55">{characterHint(FORM_LIMITS.productName)}</span>
+          {nameError ? (
+            <span className="mt-1 block text-xs font-semibold text-red-600">Nama produk wajib diisi</span>
+          ) : (
+            <span className="mt-1 block text-xs text-color5/55">{characterHint(FORM_LIMITS.productName)}</span>
+          )}
         </label>
+
         <label className="block">
-          <span className="mb-1.5 block text-sm font-semibold">Deskripsi</span>
+          <span className="mb-1.5 block text-sm font-semibold text-color5">Deskripsi</span>
           <textarea
             value={draft.description}
             maxLength={FORM_LIMITS.productDescription}
@@ -313,22 +342,84 @@ function ProductEditor({
           />
           <span className="mt-1 block text-xs text-color5/55">{characterHint(FORM_LIMITS.productDescription)}</span>
         </label>
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-semibold">Harga</span>
-          <input
-            value={draft.price}
-            onChange={(event) =>
-              update("price", event.target.value.replace(/\D/g, "").slice(0, FORM_LIMITS.productPriceDigits))
-            }
-            maxLength={FORM_LIMITS.productPriceDigits}
-            inputMode="numeric"
-            placeholder="Contoh: 15000"
-            className="h-10 w-full rounded-lg border border-color4 px-3 outline-none focus:border-color1"
-          />
-          <span className="mt-1 block text-xs text-color5/55">Hanya angka • Maksimal {FORM_LIMITS.productPriceDigits} digit</span>
-        </label>
+
+        {/* Price Type Toggle Switch */}
+        <div>
+          <span className="mb-1.5 block text-sm font-semibold text-color5">Tipe Harga</span>
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-color4/40 p-1 border border-color4/60">
+            <button
+              type="button"
+              onClick={() => update("isRange", false)}
+              className={`rounded-lg py-1.5 text-xs font-bold transition ${
+                !draft.isRange
+                  ? "bg-color1 text-white shadow-xs"
+                  : "text-color5/70 hover:text-color5"
+              }`}
+            >
+              Harga Pasti
+            </button>
+            <button
+              type="button"
+              onClick={() => update("isRange", true)}
+              className={`rounded-lg py-1.5 text-xs font-bold transition ${
+                draft.isRange
+                  ? "bg-color1 text-white shadow-xs"
+                  : "text-color5/70 hover:text-color5"
+              }`}
+            >
+              Rentang Harga
+            </button>
+          </div>
+        </div>
+
+        {!draft.isRange ? (
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-semibold text-color5">Harga (Rp)</span>
+            <input
+              value={draft.price}
+              onChange={(event) =>
+                update("price", event.target.value.replace(/\D/g, "").slice(0, FORM_LIMITS.productPriceDigits))
+              }
+              maxLength={FORM_LIMITS.productPriceDigits}
+              inputMode="numeric"
+              placeholder="Contoh: 15000"
+              className="h-10 w-full rounded-lg border border-color4 px-3 outline-none focus:border-color1"
+            />
+            <span className="mt-1 block text-xs text-color5/55">Hanya angka • Maksimal {FORM_LIMITS.productPriceDigits} digit</span>
+          </label>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-color5">Batas Minimal (Rp)</span>
+              <input
+                value={draft.price}
+                onChange={(event) =>
+                  update("price", event.target.value.replace(/\D/g, "").slice(0, FORM_LIMITS.productPriceDigits))
+                }
+                maxLength={FORM_LIMITS.productPriceDigits}
+                inputMode="numeric"
+                placeholder="Contoh: 1000"
+                className="h-10 w-full rounded-lg border border-color4 px-3 text-sm outline-none focus:border-color1"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-color5">Batas Maksimal (Rp)</span>
+              <input
+                value={draft.priceMax ?? ""}
+                onChange={(event) =>
+                  update("priceMax", event.target.value.replace(/\D/g, "").slice(0, FORM_LIMITS.productPriceDigits))
+                }
+                maxLength={FORM_LIMITS.productPriceDigits}
+                inputMode="numeric"
+                placeholder="Contoh: 10000"
+                className="h-10 w-full rounded-lg border border-color4 px-3 text-sm outline-none focus:border-color1"
+              />
+            </label>
+          </div>
+        )}
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-color4/60">
         <button
           type="button"
           disabled={!changed || saving || deleting}
@@ -341,19 +432,31 @@ function ProductEditor({
           type="button"
           disabled={!changed || saving || deleting}
           onClick={() => void save()}
-          className="rounded-lg bg-color1 px-3 py-1.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg bg-color1 px-3 py-1.5 text-sm font-bold text-white transition hover:bg-color1/90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {saving ? "Menyimpan..." : "Simpan"}
         </button>
         <button
           type="button"
           disabled={saving || deleting}
-          onClick={() => void remove()}
+          onClick={() => setShowConfirmDelete(true)}
           className="ml-auto inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
         >
           <Trash2 size={15} /> {deleting ? "Menghapus..." : "Hapus"}
         </button>
       </div>
+
+      <ConfirmModal
+        isOpen={showConfirmDelete}
+        title="Hapus Produk?"
+        message={`Apakah Anda yakin ingin menghapus produk "${draft.name}"?`}
+        confirmLabel="Hapus Produk"
+        cancelLabel="Batal"
+        variant="danger"
+        isLoading={deleting}
+        onConfirm={() => void remove()}
+        onClose={() => setShowConfirmDelete(false)}
+      />
     </article>
   );
 }
@@ -380,23 +483,22 @@ export default function UmkmManagement({
   const form = { ...defaultForm, ...initialForm, password: "" };
   const [savedForm, setSavedForm] = useState(form);
   const [draftForm, setDraftForm] = useState(form);
-  const [savedImages, setSavedImages] =
-    useState<Record<string, UploadedImage>>(initialImages);
-  const [displayImages, setDisplayImages] =
-    useState<Record<string, UploadedImage>>(initialImages);
+  const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({});
+
+  const [savedImages, setSavedImages] = useState<Record<string, UploadedImage>>(initialImages);
+  const [displayImages, setDisplayImages] = useState<Record<string, UploadedImage>>(initialImages);
   const [pendingFiles, setPendingFiles] = useState<Record<string, File>>({});
-  const [uploadError, setUploadError] = useState("");
-  const [formError, setFormError] = useState("");
-  const [formSuccess, setFormSuccess] = useState("");
-  const [imageSuccess, setImageSuccess] = useState("");
+  const [deleteImageTarget, setDeleteImageTarget] = useState<string | null>(null);
+
   const [savingForm, setSavingForm] = useState(false);
   const [savingImages, setSavingImages] = useState(false);
   const [previewImage, setPreviewImage] = useState<UploadedImage | null>(null);
+
   const [products, setProducts] = useState(initialProducts);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [productPage, setProductPage] = useState(1);
   const [addingProduct, setAddingProduct] = useState(false);
-  const [productError, setProductError] = useState("");
 
   useEffect(() => {
     const nextForm = { ...defaultForm, ...initialForm, password: "" };
@@ -414,6 +516,15 @@ export default function UmkmManagement({
     setPendingFiles({});
   }, [initialImages]);
 
+  // Debounce product search (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setProductPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const formChanged = JSON.stringify(savedForm) !== JSON.stringify(draftForm);
   const imagesChanged = Object.keys(pendingFiles).length > 0;
 
@@ -421,10 +532,10 @@ export default function UmkmManagement({
     () =>
       products.filter(
         (product) =>
-          product.name.toLowerCase().includes(search.toLowerCase()) ||
-          product.description.toLowerCase().includes(search.toLowerCase()),
+          product.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          product.description.toLowerCase().includes(debouncedSearch.toLowerCase()),
       ),
-    [products, search],
+    [products, debouncedSearch],
   );
   const totalProductPages = Math.ceil(
     filteredProducts.length / PRODUCTS_PER_PAGE,
@@ -437,32 +548,56 @@ export default function UmkmManagement({
   function updateForm(key: keyof UmkmForm, value: string) {
     if (key === "rt" || key === "rw") value = value.replace(/\D/g, "");
     if (key === "no_wa") value = value.replace(/[^\d+\s()-]/g, "");
+
     setDraftForm((current) => ({ ...current, [key]: value }));
-    setFormSuccess("");
+
+    // Reset invalid error border as soon as user types in required field
+    if (value.trim()) {
+      setInvalidFields((prev) => ({ ...prev, [key]: false }));
+    }
   }
 
   async function saveForm() {
+    // Validate required fields
+    const missing: Record<string, boolean> = {};
+    if (!draftForm.nama.trim()) missing.nama = true;
+    if (!draftForm.pemilik.trim()) missing.pemilik = true;
+    if (!draftForm.rt.trim()) missing.rt = true;
+    if (!draftForm.rw.trim()) missing.rw = true;
+    if (!draftForm.dukuh.trim()) missing.dukuh = true;
+    if (!draftForm.dusun.trim()) missing.dusun = true;
+    if (!draftForm.alamat_lengkap.trim()) missing.alamat_lengkap = true;
+    if (!draftForm.no_wa.trim()) missing.no_wa = true;
+
+    if (Object.keys(missing).length > 0) {
+      setInvalidFields(missing);
+      showToast(
+        "Gagal Memperbarui Profil\nPenyebab: Kolom wajib (* Nama, Pemilik, RT, RW, Dukuh, Dusun, Alamat Lengkap, No. WA) belum terisi.\nSolusi: Lengkapi kolom bertanda bintang merah sebelum menyimpan.",
+        "error"
+      );
+      return;
+    }
+
     setSavingForm(true);
-    setFormError("");
-    setFormSuccess("");
     try {
       const result = await updateUmkmProfile(Number(umkmId), draftForm);
       setSavingForm(false);
       if (result.error) {
         showToast(result.error, "error");
-        setFormError(result.error);
         return;
       }
       const nextForm = { ...draftForm, password: "" };
       setSavedForm(nextForm);
       setDraftForm(nextForm);
-      setFormSuccess("Profil UMKM berhasil disimpan.");
+      setInvalidFields({});
       showToast("Profil UMKM berhasil disimpan.", "success");
       router.refresh();
     } catch (err) {
       setSavingForm(false);
-      showToast("Gagal menyimpan profil karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setFormError("Terjadi kesalahan sistem saat menyimpan profil.");
+      showToast(
+        "Penyebab: Terjadi masalah koneksi saat menyimpan profil UMKM.\nSolusi: Silakan periksa jaringan internet Anda dan coba lagi.",
+        "error"
+      );
       console.error("saveForm error:", err);
     }
   }
@@ -474,13 +609,13 @@ export default function UmkmManagement({
       !["image/jpeg", "image/png"].includes(file.type) ||
       file.size > 2 * 1024 * 1024
     ) {
-      setUploadError("Gambar harus berformat JPEG/JPG/PNG dan maksimal 2 MB.");
-      showToast("Gambar harus berformat JPEG/JPG/PNG dan maksimal 2 MB.", "error");
+      showToast(
+        "Penyebab: Gambar yang dipilih memiliki format yang tidak didukung atau ukurannya melebihi 2 MB.\nSolusi: Pilih foto berformat JPEG/PNG dengan ukuran di bawah 2 MB.",
+        "error"
+      );
       event.target.value = "";
       return;
     }
-    setUploadError("");
-    setImageSuccess("");
     setPendingFiles((current) => ({ ...current, [slot]: file }));
     setDisplayImages((current) => ({
       ...current,
@@ -493,9 +628,6 @@ export default function UmkmManagement({
     if (!entries.length) return;
 
     setSavingImages(true);
-    setUploadError("");
-    setImageSuccess("");
-
     try {
       for (const [slotLabel, file] of entries) {
         const slot = slotKeys[slotLabel as (typeof imageSlots)[number]];
@@ -504,7 +636,6 @@ export default function UmkmManagement({
         const result = await uploadUmkmImage(Number(umkmId), slot, formData);
         if (result.error) {
           showToast(result.error, "error");
-          setUploadError(result.error);
           setSavingImages(false);
           return;
         }
@@ -512,13 +643,14 @@ export default function UmkmManagement({
 
       setSavingImages(false);
       setPendingFiles({});
-      setImageSuccess("Gambar berhasil disimpan.");
-      showToast("Gambar berhasil disimpan.", "success");
+      showToast("Gambar UMKM berhasil disimpan.", "success");
       router.refresh();
     } catch (err) {
       setSavingImages(false);
-      showToast("Gagal menyimpan gambar karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setUploadError("Terjadi kesalahan sistem saat menyimpan gambar.");
+      showToast(
+        "Penyebab: Gagal mengunggah foto karena koneksi internet terputus.\nSolusi: Periksa jaringan Anda dan coba unggah lagi.",
+        "error"
+      );
       console.error("saveImages error:", err);
     }
   }
@@ -531,61 +663,81 @@ export default function UmkmManagement({
     }
     setDisplayImages({ ...savedImages });
     setPendingFiles({});
-    setUploadError("");
-    setImageSuccess("");
   }
 
-  async function removeImage(slotLabel: string) {
+  async function handleConfirmDeleteImage() {
+    if (!deleteImageTarget) return;
+    const slotLabel = deleteImageTarget;
     const slot = slotKeys[slotLabel as (typeof imageSlots)[number]];
-    if (!window.confirm(`Hapus ${slotLabel}?`)) return;
 
     setSavingImages(true);
-    setUploadError("");
-    setImageSuccess("");
-
     try {
       const result = await deleteUmkmImage(Number(umkmId), slot);
       setSavingImages(false);
+      setDeleteImageTarget(null);
 
       if (result.error) {
         showToast(result.error, "error");
-        setUploadError(result.error);
         return;
       }
 
-      setImageSuccess("Gambar berhasil dihapus.");
-      showToast("Gambar berhasil dihapus.", "success");
+      // Real-time frontend update
+      setDisplayImages((prev) => {
+        const next = { ...prev };
+        delete next[slotLabel];
+        return next;
+      });
+      setSavedImages((prev) => {
+        const next = { ...prev };
+        delete next[slotLabel];
+        return next;
+      });
+
+      showToast(`Gambar "${slotLabel}" berhasil dihapus.`, "success");
       router.refresh();
     } catch (err) {
       setSavingImages(false);
-      showToast("Gagal menghapus gambar karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setUploadError("Terjadi kesalahan sistem saat menghapus gambar.");
+      setDeleteImageTarget(null);
+      showToast(
+        "Penyebab: Gagal menghapus gambar karena gangguan sistem.\nSolusi: Silakan coba lagi.",
+        "error"
+      );
       console.error("removeImage error:", err);
     }
   }
 
   async function handleAddProduct() {
     setAddingProduct(true);
-    setProductError("");
     try {
       const result = await createProduct(Number(umkmId), {
         name: "Produk Baru",
         description: "",
         price: "0",
+        priceMax: "",
+        isRange: false,
       });
       setAddingProduct(false);
       if (result.error) {
         showToast(result.error, "error");
-        setProductError(result.error);
         return;
+      }
+
+      // Real-time update list produk di frontend
+      if (result.id) {
+        setProducts((prev) => [
+          { id: result.id!, name: "Produk Baru", description: "", price: "0", priceMax: "", isRange: false },
+          ...prev,
+        ]);
       }
       setProductPage(1);
       showToast("Produk baru berhasil ditambahkan.", "success");
       router.refresh();
     } catch (err) {
       setAddingProduct(false);
-      showToast("Gagal menambahkan produk baru karena gangguan sistem. Silakan coba beberapa saat lagi.", "error");
-      setProductError("Terjadi kesalahan sistem saat menambahkan produk.");
+      showToast(
+        "Penyebab: Terjadi kesalahan server saat membuat produk baru.\nSolusi: Silakan coba tambah produk beberapa saat lagi.",
+        "error"
+      );
       console.error("handleAddProduct error:", err);
     }
   }
@@ -609,62 +761,89 @@ export default function UmkmManagement({
           Perbarui profil usaha, gambar, dan produk yang dijual.
         </p>
       </div>
+
+      {/* Profil UMKM Form */}
       <section className="mt-8 rounded-2xl border border-color4/80 bg-color3 p-5 shadow-sm sm:p-7">
         <h2 className="text-xl font-bold">Data UMKM</h2>
-        {formError && (
-          <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-            {formError}
-          </p>
-        )}
-        {formSuccess && (
-          <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-            {formSuccess}
-          </p>
-        )}
+        <p className="mt-1 text-sm text-color5/65">
+          Kolom bertanda bintang merah (<span className="text-red-500 font-bold">*</span>) wajib diisi.
+        </p>
+
         <div className="mt-6 grid gap-5 md:grid-cols-2">
-          {formFields.map(([key, label, type, maxLength, format]) => (
-            <label
-              key={key}
-              className={key === "alamat_lengkap" ? "md:col-span-2" : ""}
-            >
-              <span className="mb-2 block text-sm font-semibold">{label}</span>
-              {key === "alamat_lengkap" ? (
-                <textarea
-                  value={draftForm[key]}
-                  maxLength={maxLength}
-                  onChange={(event) => updateForm(key, event.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-color4 px-4 py-3 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
-                />
-              ) : (
-                <input
-                  type={type}
-                  value={draftForm[key]}
-                  maxLength={maxLength}
-                  inputMode={key === "rt" || key === "rw" ? "numeric" : undefined}
-                  required={
-                    key === "nama" || key === "pemilik" || key === "no_wa"
-                  }
-                  onChange={(event) => updateForm(key, event.target.value)}
-                  className="h-12 w-full rounded-xl border border-color4 px-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
-                />
-              )}
-              <span className="mt-2 block text-xs text-color5/55">
-                {key === "password"
-                  ? `Kosongkan jika tidak ingin mengubah password. Maksimal ${maxLength} karakter.`
-                  : characterHint(maxLength, format)}
-              </span>
-            </label>
-          ))}
+          {formFields.map(([key, label, type, maxLength, format, isRequired]) => {
+            const isError = Boolean(invalidFields[key]);
+
+            if (key === "password") {
+              return (
+                <div key={key} className="md:col-span-1">
+                  <PasswordInput
+                    label={label}
+                    isRequired={isRequired}
+                    value={draftForm[key]}
+                    maxLength={maxLength}
+                    onChange={(event) => updateForm(key, event.target.value)}
+                    error={isError}
+                    hint="Kosongkan jika tidak ingin mengubah password."
+                  />
+                </div>
+              );
+            }
+
+            return (
+              <label
+                key={key}
+                className={key === "alamat_lengkap" ? "md:col-span-2 block" : "block"}
+              >
+                <span className="mb-2 block text-sm font-semibold text-color5">
+                  {label} {isRequired && <span className="text-red-500">*</span>}
+                </span>
+                {key === "alamat_lengkap" ? (
+                  <textarea
+                    value={draftForm[key]}
+                    maxLength={maxLength}
+                    onChange={(event) => updateForm(key, event.target.value)}
+                    rows={3}
+                    className={`w-full rounded-xl border px-4 py-3 outline-none transition ${
+                      isError
+                        ? "border-red-500 bg-red-50/20 focus:border-red-600 focus:ring-2 focus:ring-red-500/15"
+                        : "border-color4 focus:border-color1 focus:ring-2 focus:ring-color1/15"
+                    }`}
+                  />
+                ) : (
+                  <input
+                    type={type}
+                    value={draftForm[key]}
+                    maxLength={maxLength}
+                    inputMode={key === "rt" || key === "rw" ? "numeric" : undefined}
+                    onChange={(event) => updateForm(key, event.target.value)}
+                    className={`h-12 w-full rounded-xl border px-4 outline-none transition ${
+                      isError
+                        ? "border-red-500 bg-red-50/20 focus:border-red-600 focus:ring-2 focus:ring-red-500/15"
+                        : "border-color4 focus:border-color1 focus:ring-2 focus:ring-color1/15"
+                    }`}
+                  />
+                )}
+                {isError ? (
+                  <span className="mt-1 block text-xs font-semibold text-red-600">
+                    {label} wajib diisi.
+                  </span>
+                ) : (
+                  <span className="mt-2 block text-xs text-color5/55">
+                    {characterHint(maxLength, format)}
+                  </span>
+                )}
+              </label>
+            );
+          })}
         </div>
+
         <div className="mt-7 flex justify-end gap-3 border-t border-color4 pt-6">
           <button
             type="button"
             disabled={!formChanged || savingForm}
             onClick={() => {
               setDraftForm(savedForm);
-              setFormError("");
-              setFormSuccess("");
+              setInvalidFields({});
             }}
             className="rounded-xl border border-color4 px-5 py-3 font-bold disabled:cursor-not-allowed disabled:opacity-40"
           >
@@ -674,90 +853,88 @@ export default function UmkmManagement({
             type="button"
             disabled={!formChanged || savingForm}
             onClick={() => void saveForm()}
-            className="inline-flex items-center gap-2 rounded-xl bg-color1 px-5 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl bg-color1 px-5 py-3 font-bold text-white transition hover:bg-color1/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Save size={18} />{" "}
+            <Save size={18} />
             {savingForm ? "Menyimpan..." : "Simpan Perubahan"}
           </button>
         </div>
       </section>
+
+      {/* Category Selector */}
       <CategorySelector
         options={categoryOptions}
         selectedIds={initialCategoryIds}
         umkmId={umkmId}
       />
+
+      {/* Logo & Gambar UMKM */}
       <section className="mt-7 rounded-2xl border border-color4/80 bg-color3 p-5 shadow-sm sm:p-7">
         <div className="flex items-center gap-2">
           <ImagePlus className="text-color1" size={22} />
           <h2 className="text-xl font-bold">Logo dan Gambar UMKM</h2>
         </div>
         <p className="mt-2 text-sm text-color5/60">
-          Unggah atau ganti logo serta gambar usaha. Maksimal 2 MB, format
-          JPEG/JPG/PNG.
+          Unggah atau ganti logo serta gambar usaha. Maksimal 2 MB, format JPEG/JPG/PNG.
         </p>
-        {uploadError && (
-          <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-            {uploadError}
-          </p>
-        )}
-        {imageSuccess && (
-          <p className="mt-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-            {imageSuccess}
-          </p>
-        )}
+
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {imageSlots.map((slot) => (
-            <article key={slot} className="rounded-2xl border border-color4/80 p-4">
-              <p className="font-bold">{slot}</p>
-              <button
-                type="button"
-                disabled={!displayImages[slot]}
-                onClick={() =>
-                  setPreviewImage(displayImages[slot] ?? null)
-                }
-                className="mt-3 flex h-40 w-full items-center justify-center overflow-hidden rounded-xl bg-color4/65 text-sm font-semibold text-color5/50 disabled:cursor-default"
-              >
-                {displayImages[slot] ? (
-                  <img
-                    src={displayImages[slot].url}
-                    alt={slot}
-                    className="h-full w-full object-cover transition hover:scale-105"
-                  />
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Camera size={19} /> Gambar
-                  </span>
-                )}
-              </button>
-              <label className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-color4 px-3 py-2 text-sm font-bold text-color1 transition hover:bg-color4/45">
-                <span className="flex items-center gap-2">
-                  <Upload size={16} />{" "}
-                  {displayImages[slot] ? "Ganti Gambar" : "Upload Gambar"}
-                </span>
-                <span className="mt-1 text-[11px] font-medium text-color5/55">
-                  Maks. 2 MB • JPEG/JPG/PNG
-                </span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png"
-                  className="sr-only"
-                  disabled={savingImages}
-                  onChange={(event) => handleUpload(event, slot)}
-                />
-              </label>
-              {displayImages[slot] && (
+            <article key={slot} className="rounded-2xl border border-color4/80 p-4 flex flex-col justify-between">
+              <div>
+                <p className="font-bold">{slot}</p>
                 <button
                   type="button"
-                  disabled={savingImages}
-                  onClick={() => void removeImage(slot)}
-                  className="mt-2 w-full rounded-lg border border-red-200 px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
+                  disabled={!displayImages[slot]}
+                  onClick={() => setPreviewImage(displayImages[slot] ?? null)}
+                  className="mt-3 flex h-40 w-full items-center justify-center overflow-hidden rounded-xl bg-color4/65 text-sm font-semibold text-color5/50 disabled:cursor-default"
                 >
-                  Hapus Gambar
+                  {displayImages[slot] ? (
+                    <img
+                      src={displayImages[slot].url}
+                      alt={slot}
+                      className="h-full w-full object-cover transition hover:scale-105"
+                    />
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Camera size={19} /> Gambar
+                    </span>
+                  )}
                 </button>
-              )}
+              </div>
+
+              <div className="mt-3 space-y-2">
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-color4 px-3 py-2 text-sm font-bold text-color1 transition hover:bg-color4/45">
+                  <span className="flex items-center gap-2">
+                    <Upload size={16} />
+                    {displayImages[slot] ? "Ganti Gambar" : "Upload Gambar"}
+                  </span>
+                  <span className="mt-1 text-[11px] font-medium text-color5/55">
+                    Maks. 2 MB • JPEG/JPG/PNG
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    className="sr-only"
+                    disabled={savingImages}
+                    onChange={(event) => handleUpload(event, slot)}
+                  />
+                </label>
+                {displayImages[slot] && (
+                  <button
+                    type="button"
+                    disabled={savingImages}
+                    onClick={() => setDeleteImageTarget(slot)}
+                    className="w-full rounded-lg border border-red-200 px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-40"
+                  >
+                    Hapus Gambar
+                  </button>
+                )}
+              </div>
             </article>
           ))}
         </div>
+
         <div className="mt-7 flex justify-end gap-3 border-t border-color4 pt-6">
           <button
             type="button"
@@ -771,19 +948,21 @@ export default function UmkmManagement({
             type="button"
             disabled={!imagesChanged || savingImages}
             onClick={() => void saveImages()}
-            className="inline-flex items-center gap-2 rounded-xl bg-color1 px-5 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-xl bg-color1 px-5 py-3 font-bold text-white transition hover:bg-color1/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <Save size={18} />{" "}
+            <Save size={18} />
             {savingImages ? "Menyimpan..." : "Simpan Gambar"}
           </button>
         </div>
       </section>
+
+      {/* Lightbox Preview Gambar */}
       {previewImage && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Preview gambar UMKM"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-color5/75 p-5"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-color5/75 p-5 backdrop-blur-xs"
           onClick={() => setPreviewImage(null)}
         >
           <div
@@ -798,115 +977,109 @@ export default function UmkmManagement({
             <button
               type="button"
               onClick={() => setPreviewImage(null)}
-              className="absolute -right-3 -top-3 grid h-10 w-10 place-items-center rounded-full bg-color3 text-color5 shadow-lg"
-              aria-label="Tutup preview"
+              className="absolute -top-3 -right-3 grid h-9 w-9 place-items-center rounded-full bg-color3 text-color5 shadow-lg transition hover:bg-color4"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
-            <a
-              href={previewImage.url}
-              target="_blank"
-              rel="noreferrer"
-              className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-lg bg-color3 px-4 py-2 text-sm font-bold text-color1"
-            >
-              <ExternalLink size={16} /> Buka gambar
-            </a>
           </div>
         </div>
       )}
-      <section className="mt-7">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+
+      {/* Custom Confirm Modal Hapus Gambar */}
+      <ConfirmModal
+        isOpen={Boolean(deleteImageTarget)}
+        title="Hapus Gambar?"
+        message={`Apakah Anda yakin ingin menghapus ${deleteImageTarget}?`}
+        confirmLabel="Hapus Gambar"
+        cancelLabel="Batal"
+        variant="danger"
+        isLoading={savingImages}
+        onConfirm={() => void handleConfirmDeleteImage()}
+        onClose={() => setDeleteImageTarget(null)}
+      />
+
+      {/* Kelola Produk UMKM */}
+      <section className="mt-7 rounded-2xl border border-color4/80 bg-color3 p-5 shadow-sm sm:p-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold">Produk UMKM</h2>
+            <h2 className="text-xl font-bold">Daftar Produk</h2>
             <p className="mt-1 text-sm text-color5/60">
-              Kelola daftar produk yang ditampilkan pada usaha ini.
+              Kelola katalog barang atau jasa yang ditawarkan oleh UMKM ini.
             </p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <button
-              type="button"
-              disabled={addingProduct}
-              onClick={() => void handleAddProduct()}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-color1 px-4 font-bold text-white disabled:opacity-40 whitespace-nowrap shrink-0"
-            >
-              <Plus size={18} />{" "}
-              {addingProduct ? "Menambahkan..." : "Tambah Produk"}
-            </button>
-            <div className="relative w-full sm:max-w-sm">
-              <Search
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-color5/45"
-                size={18}
-              />
-              <input
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setProductPage(1);
-                }}
-                placeholder="Cari produk..."
-                className="h-11 w-full rounded-xl border border-color4 bg-color3 pl-11 pr-4 outline-none focus:border-color1 focus:ring-2 focus:ring-color1/15"
-              />
-            </div>
-          </div>
+          <button
+            type="button"
+            disabled={addingProduct}
+            onClick={() => void handleAddProduct()}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-color1 px-5 py-3 font-bold text-white transition hover:bg-color1/90 disabled:opacity-50"
+          >
+            <Plus size={18} /> {addingProduct ? "Menambahkan..." : "Tambah Produk Baru"}
+          </button>
         </div>
-        {productError && (
-          <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-            {productError}
-          </p>
-        )}
-        <div className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+
+        {/* Debounced search filter produk */}
+        <div className="relative mt-6 max-w-md">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-color5/45" size={18} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari produk..."
+            className="h-11 w-full rounded-xl border border-color4 bg-color3 pl-11 pr-4 outline-none transition focus:border-color1"
+          />
+        </div>
+
+        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visibleProducts.map((product) => (
             <ProductEditor
               key={product.id}
               umkmId={umkmId}
               product={product}
+              onSaved={() => router.refresh()}
               onDeleted={() => {
-                setProductPage(1);
+                setProducts((current) =>
+                  current.filter((item) => item.id !== product.id),
+                );
                 router.refresh();
               }}
-              onSaved={() => router.refresh()}
             />
           ))}
         </div>
+
         {!visibleProducts.length && (
-          <p className="mt-5 rounded-2xl border border-color4 bg-color3 py-12 text-center text-sm text-color5/60">
-            {products.length
-              ? "Produk tidak ditemukan."
-              : "Belum ada produk. Klik Tambah Produk untuk memulai."}
+          <p className="py-12 text-center text-sm font-medium text-color5/60">
+            {search ? "Produk tidak ditemukan." : "Belum ada produk yang ditambahkan."}
           </p>
         )}
+
         {totalProductPages > 1 && (
           <div className="mt-8 flex items-center justify-center gap-2">
             <button
               type="button"
-              aria-label="Halaman produk sebelumnya"
               disabled={productPage === 1}
-              onClick={() => setProductPage((value) => value - 1)}
-              className="grid h-10 w-10 place-items-center rounded-lg border border-color4 bg-color3 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => setProductPage((p) => p - 1)}
+              className="grid h-9 w-9 place-items-center rounded-lg border border-color4 bg-color3 disabled:opacity-40"
             >
-              <ChevronLeft size={19} />
+              <ChevronLeft size={18} />
             </button>
-            {Array.from(
-              { length: totalProductPages },
-              (_, index) => index + 1,
-            ).map((number) => (
+            {Array.from({ length: totalProductPages }, (_, i) => i + 1).map((n) => (
               <button
                 type="button"
-                key={number}
-                onClick={() => setProductPage(number)}
-                className={`h-10 w-10 rounded-lg font-bold ${productPage === number ? "bg-color1 text-white" : "border border-color4 bg-color3 hover:bg-color2"}`}
+                key={n}
+                onClick={() => setProductPage(n)}
+                className={`h-9 w-9 rounded-lg font-bold text-sm ${
+                  productPage === n ? "bg-color1 text-white" : "border border-color4 bg-color3"
+                }`}
               >
-                {number}
+                {n}
               </button>
             ))}
             <button
               type="button"
-              aria-label="Halaman produk berikutnya"
               disabled={productPage === totalProductPages}
-              onClick={() => setProductPage((value) => value + 1)}
-              className="grid h-10 w-10 place-items-center rounded-lg border border-color4 bg-color3 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => setProductPage((p) => p + 1)}
+              className="grid h-9 w-9 place-items-center rounded-lg border border-color4 bg-color3 disabled:opacity-40"
             >
-              <ChevronRight size={19} />
+              <ChevronRight size={18} />
             </button>
           </div>
         )}

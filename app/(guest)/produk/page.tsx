@@ -1,8 +1,16 @@
 import GuestProductDirectory from "@/components/GuestProductDirectory";
 import { createClient } from "@/lib/supabase/server";
 
-function formatPrice(value: number | string | null | undefined) {
+function formatPrice(
+  value: number | string | null | undefined,
+  maxVal?: number | string | null,
+  isRange?: boolean,
+) {
   const parsed = Number(value ?? 0);
+  if (isRange && maxVal != null) {
+    const parsedMax = Number(maxVal);
+    return `Rp ${parsed.toLocaleString("id-ID", { maximumFractionDigits: 0 })} - Rp ${parsedMax.toLocaleString("id-ID", { maximumFractionDigits: 0 })}`;
+  }
   return `Rp ${parsed.toLocaleString("id-ID", { maximumFractionDigits: 0 })}`;
 }
 
@@ -11,6 +19,8 @@ type ProductRow = {
   nama: string;
   deskripsi: string | null;
   harga: number | string | null;
+  harga_max: number | string | null;
+  is_range: boolean;
   umkm?: { id: number; slug: string; nama: string; dusun: string | null } | null;
 };
 
@@ -19,7 +29,7 @@ export default async function Page() {
 
   const productsResult = await supabase
     .from("produk")
-    .select("id,nama,deskripsi,harga,umkm(id,slug,nama,dusun)")
+    .select("id,nama,deskripsi,harga,harga_max,is_range,umkm(id,slug,nama,dusun)")
     .order("id", { ascending: true });
 
   const products = (productsResult.data ?? []).map((row) => {
@@ -31,6 +41,8 @@ export default async function Page() {
       nama: row.nama,
       deskripsi: row.deskripsi ?? null,
       harga: row.harga ?? null,
+      harga_max: row.harga_max ?? null,
+      is_range: Boolean(row.is_range),
       umkm: umkm
         ? {
             id: umkm.id,
@@ -76,7 +88,7 @@ export default async function Page() {
     umkmSlug: item.umkm?.slug ?? "",
     category: categoryMap.get(item.umkm?.id ?? 0) ?? "Produk UMKM",
     dusun: item.umkm?.dusun ?? "",
-    price: formatPrice(item.harga),
+    price: formatPrice(item.harga, item.harga_max, item.is_range),
   }));
 
   const categories = Array.from(new Set(initialProducts.map((item) => item.category))).sort();

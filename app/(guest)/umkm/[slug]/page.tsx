@@ -24,7 +24,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
       .eq("umkm_id", umkm.id),
     supabase
       .from("produk")
-      .select("id,nama,deskripsi,harga")
+      .select("id,nama,deskripsi,harga,harga_max,is_range")
       .eq("id_umkm", umkm.id)
       .order("id", { ascending: true }),
     supabase
@@ -58,7 +58,12 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     id: product.id,
     name: product.nama,
     description: product.deskripsi ?? "",
-    price: product.harga != null ? `Rp ${Number(product.harga).toLocaleString("id-ID", { maximumFractionDigits: 0 })}` : "Rp 0",
+    price:
+      product.is_range && product.harga_max != null
+        ? `Rp ${Number(product.harga).toLocaleString("id-ID", { maximumFractionDigits: 0 })} - Rp ${Number(product.harga_max).toLocaleString("id-ID", { maximumFractionDigits: 0 })}`
+        : product.harga != null
+          ? `Rp ${Number(product.harga).toLocaleString("id-ID", { maximumFractionDigits: 0 })}`
+          : "Rp 0",
   }));
 
   type CategoryRecord = {

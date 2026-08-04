@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiSearch, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import Select from "react-select";
 import ProductCard from "@/components/ProductCard";
@@ -47,9 +47,19 @@ const PER_PAGE = 12;
 
 export default function GuestProductDirectory({ initialProducts, categories, dusuns }: GuestProductDirectoryProps) {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [kategori, setKategori] = useState("Semua");
   const [dusun, setDusun] = useState("Semua");
   const [page, setPage] = useState(1);
+
+  // Debounce search effect (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const categoryOptions: SelectOption[] = useMemo(
     () => [{ value: "Semua", label: "Semua Kategori" }, ...categories.map((c) => ({ value: c, label: c }))],
@@ -63,14 +73,14 @@ export default function GuestProductDirectory({ initialProducts, categories, dus
 
   const filtered = useMemo(() => {
     return initialProducts.filter((item) => {
-      const matchNama = item.name.toLowerCase().includes(search.toLowerCase()) ||
-        item.description.toLowerCase().includes(search.toLowerCase()) ||
-        item.umkmName.toLowerCase().includes(search.toLowerCase());
+      const matchNama = item.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        item.description.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        item.umkmName.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchKategori = kategori === "Semua" || item.category === kategori;
       const matchDusun = dusun === "Semua" || item.dusun === dusun;
       return matchNama && matchKategori && matchDusun;
     });
-  }, [search, kategori, dusun, initialProducts]);
+  }, [debouncedSearch, kategori, dusun, initialProducts]);
 
   const totalPage = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -83,19 +93,16 @@ export default function GuestProductDirectory({ initialProducts, categories, dus
           <span>Temukan produk-produk unggulan dari para pelaku UMKM Desa Masaran</span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-5 mt-8">
+        <div className="bg-white rounded-xl shadow-sm p-5 mt-8 border border-color4/60">
           <div className="grid lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-5 relative">
+            <div className="lg:col-span-6 relative">
               <FiSearch className="absolute left-4 top-4 text-gray-400 z-10" />
               <input
                 value={search}
                 maxLength={FORM_LIMITS.search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Cari nama atau deskripsi produk..."
-                className="w-full border rounded-lg h-12 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-color1"
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari nama, deskripsi produk, atau toko..."
+                className="w-full border rounded-lg h-12 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-color1 border-gray-200"
               />
             </div>
 
@@ -126,10 +133,6 @@ export default function GuestProductDirectory({ initialProducts, categories, dus
                 styles={selectStyles}
               />
             </div>
-
-            <button className="lg:col-span-1 h-12 rounded-lg bg-color1 hover:opacity-90 text-white font-semibold transition-opacity">
-              Cari
-            </button>
           </div>
         </div>
 

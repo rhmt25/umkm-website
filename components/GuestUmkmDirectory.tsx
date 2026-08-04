@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiSearch, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import Select from "react-select";
 import UmkmCard from "@/components/UmkmCard";
@@ -46,9 +46,19 @@ const PER_PAGE = 12;
 
 export default function GuestUmkmDirectory({ initialUmkms, categories, dusuns }: GuestUmkmDirectoryProps) {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [kategori, setKategori] = useState("Semua");
   const [dusun, setDusun] = useState("Semua");
   const [page, setPage] = useState(1);
+
+  // Debounce search effect (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const categoryOptions: SelectOption[] = useMemo(
     () => [{ value: "Semua", label: "Semua Kategori" }, ...categories.map((c) => ({ value: c, label: c }))],
@@ -62,12 +72,13 @@ export default function GuestUmkmDirectory({ initialUmkms, categories, dusuns }:
 
   const filtered = useMemo(() => {
     return initialUmkms.filter((item) => {
-      const matchNama = item.name.toLowerCase().includes(search.toLowerCase());
+      const matchNama = item.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        item.owner.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchKategori = kategori === "Semua" || item.category === kategori;
       const matchDusun = dusun === "Semua" || item.location === dusun || item.location === `Dusun ${dusun}`;
       return matchNama && matchKategori && matchDusun;
     });
-  }, [search, kategori, dusun, initialUmkms]);
+  }, [debouncedSearch, kategori, dusun, initialUmkms]);
 
   const totalPage = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -80,19 +91,16 @@ export default function GuestUmkmDirectory({ initialUmkms, categories, dusuns }:
           <span>Daftar UMKM di Desa Masaran</span>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-5 mt-8">
+        <div className="bg-white rounded-xl shadow-sm p-5 mt-8 border border-color4/60">
           <div className="grid lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-5 relative">
+            <div className="lg:col-span-6 relative">
               <FiSearch className="absolute left-4 top-4 text-gray-400 z-10" />
               <input
                 value={search}
                 maxLength={FORM_LIMITS.search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Cari nama UMKM..."
-                className="w-full border rounded-lg h-12 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-color1"
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari nama UMKM atau pemilik..."
+                className="w-full border rounded-lg h-12 pl-11 pr-4 focus:outline-none focus:ring-2 focus:ring-color1 border-gray-200"
               />
             </div>
 
@@ -123,10 +131,6 @@ export default function GuestUmkmDirectory({ initialUmkms, categories, dusuns }:
                 styles={selectStyles}
               />
             </div>
-
-            <button className="lg:col-span-1 h-12 rounded-lg bg-color1 hover:opacity-90 text-white font-semibold">
-              Cari
-            </button>
           </div>
         </div>
 
@@ -156,7 +160,7 @@ export default function GuestUmkmDirectory({ initialUmkms, categories, dusuns }:
             <button
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
-              className="w-10 h-10 rounded-lg border disabled:opacity-40 flex items-center justify-center"
+              className="w-10 h-10 rounded-lg border disabled:opacity-40 flex items-center justify-center bg-white hover:bg-gray-50 transition-colors"
             >
               <FiChevronLeft />
             </button>
@@ -172,7 +176,7 @@ export default function GuestUmkmDirectory({ initialUmkms, categories, dusuns }:
             <button
               disabled={page === totalPage}
               onClick={() => setPage(page + 1)}
-              className="w-10 h-10 rounded-lg border disabled:opacity-40 flex items-center justify-center"
+              className="w-10 h-10 rounded-lg border disabled:opacity-40 flex items-center justify-center bg-white hover:bg-gray-50 transition-colors"
             >
               <FiChevronRight />
             </button>
